@@ -9,7 +9,7 @@
 #include <time.h>
 
 // ===================== CONSTANTS =====================
-#define VIEWPORT_W   (960)
+#define VIEWPORT_W   (960/2)
 #define VIEWPORT_H   (470)
 #define HUD_H        51
 #define SCREEN_H     (VIEWPORT_H + HUD_H)
@@ -44,6 +44,9 @@ static Color HexColor(unsigned r, unsigned g, unsigned b) {
 #define C_WHITE   HexColor(255,255,255)
 #define C_BLACK   CLITERAL(Color){0,0,0,255}
 #define C_GRAY    HexColor(136,136,136)
+
+#define COL_YELLOW   CLITERAL(Color){255,255,0,255}
+
 
 static Color ParseHex(const char *h) {
     if (!h || h[0]!='#') return C_WHITE;
@@ -641,11 +644,16 @@ static float SYf(float wy) { return wy - gGame.arena.vpOfsY + HUD_H; }
 static int SX(float wx) { return (int)SXf(wx); }
 static int SY(float wy) { return (int)SYf(wy); }
 
-// Apply/remove a zoom scale transform centred on the game viewport
+// Apply/remove a zoom scale transform centred on the game viewport.
+// Source pivot: centre of the logical viewport (pre-zoom space).
+// Destination pivot: centre of the actual screen game area, so the view
+// stays centred regardless of window size.
 static void BeginZoom(void) {
     if (gZoom == 1.0f) return;
+    float dstX = GetScreenWidth()  * 0.5f;
+    float dstY = HUD_H + (GetScreenHeight() - HUD_H) * 0.5f;
     rlPushMatrix();
-    rlTranslatef(VIEWPORT_W * 0.5f, HUD_H + VIEWPORT_H * 0.5f, 0.0f);
+    rlTranslatef(dstX, dstY, 0.0f);
     rlScalef(gZoom, gZoom, 1.0f);
     rlTranslatef(-VIEWPORT_W * 0.5f, -(HUD_H + VIEWPORT_H * 0.5f), 0.0f);
 }
@@ -1285,27 +1293,37 @@ static void ShipScrollViewport(void) {
     Game *g = &gGame;
 
     if (s->active) {
-        if (fabsf(s->avx) > 6) ar->slideX = s->avx;
+        // Scale velocity threshold and correction speed by 1/gZoom so behaviour is
+        // constant in visual space regardless of zoom level.
+        float velThresh  = 6.0f  / gZoom;
+        float slideSpeedX = 11.0f / gZoom;
+        float slideSpeedY = 10.0f / gZoom;
+
+        if (fabsf(s->avx) > velThresh) ar->slideX = s->avx;
         else if (s->avx != 0) {
-            // Thresholds scale with zoom: offset from viewport centre divides by gZoom
-            // so the visual dead-zone stays the same size regardless of zoom level.
-            float txR = 480.0f + 270.0f / gZoom;   // 750 at zoom 1
-            float txL = 480.0f - 270.0f / gZoom;   // 210 at zoom 1
-            if ((s->x - ar->vpOfsX) > txR) ar->slideX = 11;
-            else if ((s->x - ar->vpOfsX) < txL) ar->slideX = -11;
+            // Thresholds: centre on VIEWPORT_W/2, offsets proportional to viewport size,
+            // then divided by gZoom so the visual dead-zone stays constant on screen.
+            float cx   = VIEWPORT_W * 0.5f;
+            float xOfs = VIEWPORT_W * (270.0f / 960.0f);  // 270 at 960, scales with width
+            if ((s->x - ar->vpOfsX) > cx + xOfs / gZoom) ar->slideX = slideSpeedX;
+            else if ((s->x - ar->vpOfsX) < cx - xOfs / gZoom) ar->slideX = -slideSpeedX;
         }
-        if (fabsf(s->avy) > 6) ar->slideY = s->avy;
-        else if (s->avy != 0) {
-            float tyD = 235.0f + 120.0f / gZoom;   // 355 at zoom 1
-            float tyU = 235.0f - 140.0f / gZoom;   //  95 at zoom 1
-            if ((s->y - ar->vpOfsY) > tyD) ar->slideY = 10;
-            else if ((s->y - ar->vpOfsY) < tyU) ar->slideY = -10;
-        }
-        if (s->podConnected) {
-            float tpD = 235.0f + 150.0f / gZoom;   // 385 at zoom 1
-            float tpU = 235.0f - 170.0f / gZoom;   //  65 at zoom 1
-            if ((g->pod.y - ar->vpOfsY) > tpD) ar->slideY = 10;
-            else if ((g->pod.y - ar->vpOfsY) < tpU) ar->slideY = -10;
+        if (fabsf(s->avy) > velThresh) {
+            ar->slideY = s->avy;
+        } else {
+            float cy  = VIEWPORT_H * 0.5f;
+            float yDn = VIEWPORT_H * (120.0f / 470.0f);   // 120 at 470, scales with height
+            float yUp = VIEWPORT_H * (140.0f / 470.0f);   // 140 at 470
+            if ((s->y - ar->vpOfsY) > cy + yDn / gZoom) ar->slideY = slideSpeedY;
+            else if ((s->y - ar->vpOfsY) < cy - yUp / gZoom) ar->slideY = -slideSpeedY;
+            // Pod position check only when ship isn't fast-tracking — at high gZoom the pod
+            // threshold would otherwise override upward velocity tracking and push the ship off screen.
+            if (s->podConnected) {
+                float pDn = VIEWPORT_H * (150.0f / 470.0f);   // 150 at 470
+                float pUp = VIEWPORT_H * (170.0f / 470.0f);   // 170 at 470
+                if ((g->pod.y - ar->vpOfsY) > cy + pDn / gZoom) ar->slideY = slideSpeedY;
+                else if ((g->pod.y - ar->vpOfsY) < cy - pUp / gZoom) ar->slideY = -slideSpeedY;
+            }
         }
     } else {
         // Decelerate slide (exponential decay)
@@ -1695,7 +1713,7 @@ static void ReDraw(void) {
     } // end if !paused
 
     // ---- DRAWING ----
-    ShipScrollViewport();  // update viewport offset before any drawing
+    if (!paused) ShipScrollViewport();  // update viewport offset before any drawing
     BeginZoom();
     UpdateAndDrawExplosions();
 
@@ -1812,14 +1830,18 @@ static void ReDraw(void) {
 
     // Landscape
     DrawLandscape(invis);
-    EndZoom();
 
-    // Paused overlay
+    // Paused overlay — drawn inside BeginZoom so it scales and centres with the game view
     if (paused) {
-        int cx = VIEWPORT_W / 2, cy = HUD_H + VIEWPORT_H / 2;
-        DrawRectangle(cx - 50, cy - 10, 100, 22, C_BLACK);
-        DrawVectorStr("paused", cx - VectorStrWidth("paused")/2.0f, cy - 6, C_YELLOW);
+        float pcx = VIEWPORT_W * 0.5f;
+        float pcy = HUD_H + VIEWPORT_H * 0.5f;
+        const char *ptxt = "PAUSED";
+        int ptxtW = MeasureText(ptxt, 16);
+        DrawRectangle((int)(pcx - ptxtW/2 - 6), (int)(pcy - 12), ptxtW + 12, 22, C_BLACK);
+        DrawText(ptxt, (int)(pcx - ptxtW/2), (int)(pcy - 8), 16, C_YELLOW);
     }
+
+    EndZoom();
 }
 
 static char gMsgBuf[2048];  // last displayed message (redrawn each frame in GS_DO_NOTHING)
@@ -1861,8 +1883,8 @@ static void SetNewPosition(bool hasPod, float shipX, float shipY) {
 static void StartNewLife(void) {
     LevelDef *lv = &gGame.level;
     Arena *ar = &gGame.arena;
-    ar->vpOfsX = lv->vpOfsX;
-    ar->vpOfsY = lv->vpOfsY;
+    ar->vpOfsX = lv->shipX - VIEWPORT_W / 2.0f;
+    ar->vpOfsY = lv->shipY - VIEWPORT_H / 2.5f;
     ar->slideX = ar->slideY = 0;
     ar->arenaW = lv->arenaW;
     ar->arenaH = lv->arenaH;
@@ -1949,10 +1971,6 @@ static void CheckHighScore(bool immediate);  // forward declaration
 // ===================== INPUT HANDLING =====================
 static void HandleInput(void) {
     Ship *s = &gGame.ship;
-
-    // Zoom (works regardless of ship state)
-    if (IsKeyDown(KEY_EQUAL)) { gZoom *= 1.02f; if (gZoom > 3.0f) gZoom = 3.0f; }
-    if (IsKeyDown(KEY_MINUS))  { gZoom *= 0.98f; if (gZoom < 0.2f) gZoom = 0.2f; }
 
     if (!s->active) return;
 
@@ -2292,7 +2310,10 @@ static void Thrust(void) {
         // raylib clears each frame; redraw the last message so it stays visible
         DrawHUD();
         if (gMsgBuf[0]) ShowMessage(gMsgBuf);
-        if (IsKeyPressed(KEY_SPACE)) { gPauseActive = false; gState = GS_START_GAME; }
+        // Only allow space-to-restart when there is no pending auto-transition (gPauseActive).
+        // Every mission-complete/failed/incomplete path through DO_NOTHING has an active timer,
+        // so this prevents accidentally restarting from level 1 while the transition plays out.
+        if (!gPauseActive && IsKeyPressed(KEY_SPACE)) { gState = GS_START_GAME; }
         break;
 
     default: break;
@@ -2302,6 +2323,7 @@ static void Thrust(void) {
 // ===================== MAIN =====================
 int main(void) {
     srand((unsigned)time(NULL));
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(VIEWPORT_W, SCREEN_H, "Thrust");
     SetTargetFPS(GAME_FPS);
     gHudTexture = LoadTexture("bg.gif");
@@ -2313,6 +2335,7 @@ int main(void) {
     while (!WindowShouldClose()) {
         gTick = GetFrameTime() * BASE_FPS;
         if (gTick > 3.0f) gTick = 3.0f;  // cap at 3 logical ticks (handles minimise/pause)
+        gZoom = (float)(GetScreenHeight() - HUD_H) / VIEWPORT_H;
         BeginDrawing();
         ClearBackground(C_BLACK);
         Thrust();
