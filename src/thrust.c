@@ -8,8 +8,8 @@
 #include <time.h>
 
 // ===================== CONSTANTS =====================
-#define VIEWPORT_W   960
-#define VIEWPORT_H   470
+#define VIEWPORT_W   (960)
+#define VIEWPORT_H   (470)
 #define HUD_H        51
 #define SCREEN_H     (VIEWPORT_H + HUD_H)
 #define GAME_FPS     60
@@ -567,7 +567,7 @@ typedef struct {
 } Reactor;
 
 typedef enum {
-    GS_KEY_SELECT, GS_HIGHSCORE, GS_START_GAME, GS_START_LIFE,
+    GS_KEY_SELECT, GS_HIGHSCORE, GS_HIGHSCORE_SHOW, GS_START_GAME, GS_START_LIFE,
     GS_IN_FLIGHT, GS_BLACK_HOLE, GS_GAME_OVER,
     GS_MISSION_COMPLETE, GS_MISSION_COMPLETE_MSG,
     GS_MISSION_FAILED, GS_MISSION_FAILED_MSG,
@@ -1431,7 +1431,8 @@ static void ReactorCountdown(void) {
 
 // ===================== REDRAW (INFLIGHT) =====================
 static void ReDraw(void) {
-    if (gGame.ship.paused) return;
+    bool paused = gGame.ship.paused;
+    if (!paused) {
     gGame.age += gTick;
 
     // Clear arena
@@ -1674,6 +1675,7 @@ static void ReDraw(void) {
             }
         }
     } // end if ship.active
+    } // end if !paused
 
     // ---- DRAWING ----
     UpdateAndDrawExplosions();
@@ -1683,7 +1685,7 @@ static void ReDraw(void) {
         Enemy *e = &gGame.enemies[i];
         DrawEnemy(e);
         // Fire
-        if (gGame.age > gGame.reactor.drawSmoke &&
+        if (!paused && gGame.age > gGame.reactor.drawSmoke &&
             (float)rand()/RAND_MAX < e->aggression &&
             e->gun.y > gGame.arena.vpOfsY - 100 &&
             e->gun.y < VIEWPORT_H + gGame.arena.vpOfsY + 100)
@@ -1709,7 +1711,7 @@ static void ReDraw(void) {
         if (t->fuelLoad > 0) {
             DrawTank(t);
             Ship *s = &gGame.ship;
-            if (s->shield && !s->podConnected &&
+            if (!paused && s->shield && !s->podConnected &&
                 s->x >= t->refuelZone.l && s->x <= t->refuelZone.r &&
                 s->y >= t->refuelZone.t && s->y <= t->refuelZone.b)
             {
@@ -1735,7 +1737,7 @@ static void ReDraw(void) {
     DrawShip();
 
     // Pod interaction (tractor beam)
-    if (!gGame.ship.podConnected) {
+    if (!paused && !gGame.ship.podConnected) {
         if (gGame.ship.shield) {
             if (Dist(gGame.ship.x,gGame.ship.y,gGame.pod.x,gGame.pod.y) < ROD_LEN-3)
                 gGame.ship.podInitiate = true;
@@ -1750,6 +1752,8 @@ static void ReDraw(void) {
         } else {
             gGame.ship.podInitiate = false;
         }
+    } else if (gGame.ship.podInitiate) {
+        DrawPodRod();
     }
     if (gGame.ship.podConnected) DrawPodRod();
 
@@ -1769,10 +1773,10 @@ static void ReDraw(void) {
     for (int i = 0; i < gGame.doorCount; i++) {
         Door *d = &gGame.doors[i];
         // Update door state
-        if (d->beginCloseAge >= 0.0f && gGame.age >= d->beginCloseAge) {
+        if (!paused && d->beginCloseAge >= 0.0f && gGame.age >= d->beginCloseAge) {
             d->movement = -1; d->beginCloseAge = -1.0f;
         }
-        if (d->movement != 0) {
+        if (!paused && d->movement != 0) {
             d->stateF += (float)d->movement * gTick;
             if (d->movement < 0 && d->stateF <= 0.0f) {
                 d->stateF = 0.0f; d->state = 0; d->movement = 0; d->inProgress = false;
@@ -1790,7 +1794,16 @@ static void ReDraw(void) {
 
     // Landscape
     DrawLandscape(invis);
+
+    // Paused overlay
+    if (paused) {
+        int cx = VIEWPORT_W / 2, cy = HUD_H + VIEWPORT_H / 2;
+        DrawRectangle(cx - 50, cy - 10, 100, 22, C_BLACK);
+        DrawVectorStr("paused", cx - VectorStrWidth("paused")/2.0f, cy - 6, C_YELLOW);
+    }
 }
+
+static char gMsgBuf[2048];  // last displayed message (redrawn each frame in GS_DO_NOTHING)
 
 // ===================== LEVEL LOAD / GAME INIT =====================
 static void LoadLevel(int lvl) {
@@ -1907,9 +1920,12 @@ static void CreateGame(void) {
     gGame.lives = 3;
     gGame.fuel  = 1000;
     gGame.age   = 0;
+    gMsgBuf[0]  = '\0';
     LoadLevel(1);
     gPauseActive = false;
 }
+
+static void CheckHighScore(bool immediate);  // forward declaration
 
 // ===================== INPUT HANDLING =====================
 static void HandleInput(void) {
@@ -1922,7 +1938,7 @@ static void HandleInput(void) {
     if (IsKeyPressed(KEY_QUIT)) {
         gGame.lives = -1;
         ShipDie(-5000,-5000,false);
-        gState = GS_HIGHSCORE;
+        CheckHighScore(true);
         return;
     }
 
@@ -1953,18 +1969,24 @@ static void HandleInput(void) {
 }
 
 // ===================== MAIN GAME STATE MACHINE =====================
-static char gMsgBuf[2048];
 
 static void ShowMessage(const char *msg) {
     DrawMessage(msg);
 }
 
 static void DoKeySelect(void) {
+    // JS advances scroll every 110ms = 2.2 logical ticks (50ms/tick).
+    // After JS iKeySelectPos > 168, auto-transitions to HighScoreTable.
     static const char scrollTxt[] =
-        "with thanks to chris carline  lee johnson  alex cranstone  anne peattie  ammon torrence   ";
-    static int scrollPos = 0;
-    char scroll[56] = {0};
+        "                                                    "
+        "with thanks to chris carline  lee johnson  alex cranstone  "
+        "anne peattie  ammon torrence                                                    ";
+    static float scrollAcc = 0.0f;
+    static int   scrollPos = 0;
+    static int   scrollStep = 0;   // counts advances; transition to highscore after 168
+
     int slen = (int)strlen(scrollTxt);
+    char scroll[56] = {0};
     for (int i = 0; i < 52; i++) scroll[i] = scrollTxt[(scrollPos+i) % slen];
 
     snprintf(gMsgBuf, sizeof(gMsgBuf),
@@ -1983,7 +2005,18 @@ static void DoKeySelect(void) {
         "#00ffff%.52s", scroll);
     DrawMessage(gMsgBuf);
 
-    scrollPos = (scrollPos+1) % slen;
+    // Advance scroll at JS rate: 1 step per 110ms = 2.2 logical ticks
+    scrollAcc += gTick;
+    if (scrollAcc >= 2.2f) {
+        scrollAcc -= 2.2f;
+        scrollPos = (scrollPos + 1) % slen;
+        scrollStep++;
+        if (scrollStep > 168) {
+            // JS auto-transitions to HighScoreTable after scrolling through credits
+            scrollPos = 0; scrollStep = 0; scrollAcc = 0.0f;
+            gState = GS_HIGHSCORE;
+        }
+    }
 
     if (IsKeyPressed(KEY_SPACE)) { gState = GS_START_GAME; }
 }
@@ -1996,6 +2029,80 @@ static void DoHighScoreTable(void) {
         off += snprintf(buf+off, sizeof(buf)-off, " %d. %8d  %s\n", i+1, gHighScores[i].score, gHighScores[i].name);
     }
     snprintf(buf+off, sizeof(buf)-off, "\n#ffffffpress space to start\n\n");
+    DrawMessage(buf);
+}
+
+static void CheckHighScore(bool immediate) {
+    bool cheating = gGame.cheatUnlimFuel || gGame.cheatUnlimLives;
+    if (!cheating && gGame.score > gHighScores[7].score) {
+        // Overwrite last slot, bubble up to correct sorted position
+        gHighScores[7].score = gGame.score;
+        gHighScores[7].name[0] = '\0';
+        for (int i = 7; i > 0 && gHighScores[i].score > gHighScores[i-1].score; i--) {
+            HScore tmp = gHighScores[i];
+            gHighScores[i] = gHighScores[i-1];
+            gHighScores[i-1] = tmp;
+        }
+        // Track which slot is the new entry (first empty-named slot matching score)
+        gHSNewIdx = -1;
+        for (int i = 0; i < 8; i++) {
+            if (gHighScores[i].score == gGame.score && gHighScores[i].name[0] == '\0') {
+                gHSNewIdx = i; break;
+            }
+        }
+        gHSNewName[0] = '\0';
+        gState = GS_HIGHSCORE_EDIT;
+    } else {
+        gHSNewIdx = -1;
+        if (immediate) gState = GS_HIGHSCORE;
+        else SetPause(GS_HIGHSCORE, 3000);
+    }
+}
+
+static void DoHighScoreEdit(void) {
+    // Keyboard: append chars, backspace, enter to confirm
+    int nameLen = (int)strlen(gHSNewName);
+    int key = GetCharPressed();
+    while (key > 0) {
+        char c = (char)key;
+        if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+        if (nameLen < 11 && (c == ' ' || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'))) {
+            gHSNewName[nameLen++] = c;
+            gHSNewName[nameLen] = '\0';
+        }
+        key = GetCharPressed();
+    }
+    if (IsKeyPressed(KEY_BACKSPACE) && nameLen > 0) {
+        gHSNewName[--nameLen] = '\0';
+    }
+    if (IsKeyPressed(KEY_ENTER)) {
+        if (gHSNewIdx >= 0) {
+            strncpy(gHighScores[gHSNewIdx].name, gHSNewName, 15);
+            gHighScores[gHSNewIdx].name[15] = '\0';
+        }
+        gHSNewIdx = -1;
+        gState = GS_HIGHSCORE;
+        return;
+    }
+
+    // Draw congratulations + table with cursor on new entry
+    char buf[2048];
+    int off = 0;
+    off += snprintf(buf+off, sizeof(buf)-off, "#ff0000congratulations\n\n#ffff00");
+    for (int i = 0; i < 8; i++) {
+        if (i == gHSNewIdx) {
+            off += snprintf(buf+off, sizeof(buf)-off, " %d. %8d  #00ff00%s", i+1, gHighScores[i].score, gHSNewName);
+            if (nameLen < 11) {
+                off += snprintf(buf+off, sizeof(buf)-off, "#ffff00_");
+                for (int sp = nameLen + 1; sp < 11; sp++)
+                    off += snprintf(buf+off, sizeof(buf)-off, " ");
+            }
+            off += snprintf(buf+off, sizeof(buf)-off, "#ffff00\n");
+        } else {
+            off += snprintf(buf+off, sizeof(buf)-off, " %d. %8d  %s\n", i+1, gHighScores[i].score, gHighScores[i].name);
+        }
+    }
+    snprintf(buf+off, sizeof(buf)-off, "\n#00ff00please enter your name\n\n");
     DrawMessage(buf);
 }
 
@@ -2057,14 +2164,15 @@ static void Thrust(void) {
 
     case GS_GAME_OVER:
         gState = GS_DO_NOTHING;
-        snprintf(gMsgBuf, sizeof(gMsgBuf), "#00ff00game over\n\n");
+        snprintf(gMsgBuf, sizeof(gMsgBuf), "%sgame over\n\n",
+            gGame.fuel < 1 ? "#ff0000out of fuel\n\n#00ff00" : "#00ff00");
         DrawMessage(gMsgBuf);
-        // Simple: go to highscore table after a pause
-        SetPause(GS_HIGHSCORE, 3000);
+        CheckHighScore(false);
         break;
 
     case GS_MISSION_COMPLETE:
         gState = GS_DO_NOTHING;
+        gMsgBuf[0] = '\0';
         LoadLevel(gGame.visLevel + 1);
         SetPause(GS_MISSION_COMPLETE_MSG, 1200);
         break;
@@ -2094,6 +2202,7 @@ static void Thrust(void) {
 
     case GS_MISSION_FAILED:
         gState = GS_DO_NOTHING;
+        gMsgBuf[0] = '\0';
         LoadLevel(gGame.visLevel);
         SetPause(GS_MISSION_FAILED_MSG, 1200);
         break;
@@ -2111,21 +2220,23 @@ static void Thrust(void) {
     }
 
     case GS_MISSION_INCOMPLETE:
-        SetPause(GS_MISSION_INCOMPLETE_MSG, 1200);
         gState = GS_DO_NOTHING;
+        gMsgBuf[0] = '\0';
+        SetPause(GS_MISSION_INCOMPLETE_MSG, 1200);
         break;
 
     case GS_MISSION_INCOMPLETE_MSG:
         SetPause(GS_START_LIFE, 3000);
         gState = GS_DO_NOTHING;
-        DrawMessage("#00ff00mission incomplete\n\n");
+        snprintf(gMsgBuf, sizeof(gMsgBuf), "#00ff00mission incomplete\n\n");
+        DrawMessage(gMsgBuf);
         break;
 
     case GS_CHECK_LEVEL:
         switch (gGame.visLevel) {
-            case 7:  gState=GS_DO_NOTHING; DrawMessage("#00ff00reverse gravity"); SetPause(GS_START_LIFE,3000); break;
-            case 13: gState=GS_DO_NOTHING; DrawMessage("#00ff00normal gravity\n\ninvisible planet"); SetPause(GS_START_LIFE,3000); break;
-            case 19: gState=GS_DO_NOTHING; DrawMessage("#00ff00reverse gravity\n\ninvisible planet"); SetPause(GS_START_LIFE,3000); break;
+            case 7:  gState=GS_DO_NOTHING; snprintf(gMsgBuf,sizeof(gMsgBuf),"#00ff00reverse gravity"); DrawMessage(gMsgBuf); SetPause(GS_START_LIFE,3000); break;
+            case 13: gState=GS_DO_NOTHING; snprintf(gMsgBuf,sizeof(gMsgBuf),"#00ff00normal gravity\n\ninvisible planet"); DrawMessage(gMsgBuf); SetPause(GS_START_LIFE,3000); break;
+            case 19: gState=GS_DO_NOTHING; snprintf(gMsgBuf,sizeof(gMsgBuf),"#00ff00reverse gravity\n\ninvisible planet"); DrawMessage(gMsgBuf); SetPause(GS_START_LIFE,3000); break;
             default: gState = GS_START_LIFE; break;
         }
         break;
@@ -2135,14 +2246,26 @@ static void Thrust(void) {
         DoKeySelect();
         break;
 
+    case GS_HIGHSCORE_EDIT:
+        gPauseActive = false;  // cancel any pending pause timer so it can't skip name entry
+        DoHighScoreEdit();
+        break;
+
     case GS_HIGHSCORE:
-        gState = GS_DO_NOTHING;
+        // Entry point: schedule return to KeySelect, then display persistently
+        gState = GS_HIGHSCORE_SHOW;
         SetPause(GS_KEY_SELECT, 12000);
+        // fall through to draw first frame immediately
+    case GS_HIGHSCORE_SHOW:
+        // Redrawn every frame (raylib clears each frame)
         DoHighScoreTable();
+        if (IsKeyPressed(KEY_SPACE)) { gPauseActive = false; gState = GS_START_GAME; }
         break;
 
     case GS_DO_NOTHING:
-        // Space bar starts new game from any waiting state
+        // raylib clears each frame; redraw the last message so it stays visible
+        DrawHUD();
+        if (gMsgBuf[0]) ShowMessage(gMsgBuf);
         if (IsKeyPressed(KEY_SPACE)) { gPauseActive = false; gState = GS_START_GAME; }
         break;
 
