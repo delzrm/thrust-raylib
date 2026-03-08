@@ -1144,13 +1144,20 @@ static void DrawVectorStr(const char *s, float x, float y, Color col) {
 // Numbers drawn at y=30 (HUD_NUM_Y) to overlay on the bg.gif labels/borders.
 #define HUD_NUM_Y  30.0f
 static void DrawHUD(void) {
-    // Draw HUD background from bg.gif (pick 960px slice for current level)
+    // Scale everything to the actual window width (HUD was designed for 960px)
+    float hs = (float)GetScreenWidth() / 960.0f;
+
+    // Draw HUD background stretched to full window width
     int lvFrame = (gGame.curLevel - 1);
     if (lvFrame < 0) lvFrame = 0;
     if (lvFrame > 5) lvFrame = 5;
     Rectangle src = { lvFrame * 960.0f, 0.0f, 960.0f, 51.0f };
-    Rectangle dst = { 0.0f, 0.0f, 960.0f, 51.0f };
+    Rectangle dst = { 0.0f, 0.0f, (float)GetScreenWidth(), (float)HUD_H };
     DrawTexturePro(gHudTexture, src, dst, (Vector2){0,0}, 0.0f, WHITE);
+
+    // Scale all number positions and glyphs to match the stretched HUD
+    rlPushMatrix();
+    rlScalef(hs, 1.0f, 1.0f);  // stretch x only; y stays at original pixel rows
 
     // Black out the number display areas so old values don't bleed through
     DrawRectangle(94,  30, 150, 12, C_BLACK);
@@ -1161,15 +1168,15 @@ static void DrawHUD(void) {
 
     char buf[64];
 
-    // Fuel (left-aligned at x=95, matching JS: TextSentence at local x=1 on canvas left=94)
+    // Fuel (left-aligned at x=95)
     snprintf(buf, sizeof(buf), "%d", (int)gGame.fuel);
     DrawVectorStr(buf, 95.0f, HUD_NUM_Y, C_YELLOW);
 
-    // Lives (centered at x=471, matching JS: centered at local x=45 on canvas left=426)
+    // Lives (centered at x=471)
     snprintf(buf, sizeof(buf), "%d", gGame.lives);
     DrawVectorStr(buf, 471.0f - VectorStrWidth(buf)/2.0f, HUD_NUM_Y, C_YELLOW);
 
-    // Score (right-aligned at x=867, matching JS: right-aligned at local x=200 on canvas left=667)
+    // Score (right-aligned at x=867)
     snprintf(buf, sizeof(buf), "%d", gGame.score);
     DrawVectorStr(buf, 867.0f - VectorStrWidth(buf), HUD_NUM_Y, C_YELLOW);
 
@@ -1180,6 +1187,8 @@ static void DrawHUD(void) {
         DrawVectorStr(buf, 296.0f - cw/2.0f, HUD_NUM_Y, C_GREEN);
         DrawVectorStr(buf, 646.0f - cw/2.0f, HUD_NUM_Y, C_GREEN);
     }
+
+    rlPopMatrix();
 }
 
 // ===================== MESSAGE DRAWING =====================
