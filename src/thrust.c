@@ -829,16 +829,15 @@ static void InitEnemy(Enemy *e, EnemyDef *d) {
 
 static void DrawEnemy(Enemy *e) {
     Color ec = ParseHex(gGame.level.enemyColor);
-    float sl = gGame.arena.slideX, st = gGame.arena.slideY;
     // Body outline
     for (int i = 0; i < 6; i++) {
         int j = (i+1) % 6;
-        DrawLine(SX(e->body[i].x - sl), SY(e->body[i].y - st),
-                 SX(e->body[j].x - sl), SY(e->body[j].y - st), ec);
+        DrawLine(SX(e->body[i].x), SY(e->body[i].y),
+                 SX(e->body[j].x), SY(e->body[j].y), ec);
     }
     // Dome arc
     float domeRad = 3.7f + e->ori, domeEnd = 2.58f + e->ori;
-    DrawArcLines(SXf(e->dome.x - sl), SYf(e->dome.y - st), 26,
+    DrawArcLines(SXf(e->dome.x), SYf(e->dome.y), 26,
                  domeEnd, domeRad, ec);
 }
 
@@ -857,8 +856,8 @@ static void InitTank(Tank *t, TankDef *d) {
 }
 
 static void DrawTank(Tank *t) {
-    float sx = SXf(t->x - gGame.arena.slideX);
-    float sy = SYf(t->y - gGame.arena.slideY);
+    float sx = SXf(t->x);
+    float sy = SYf(t->y);
     Color tc = ParseHex(gGame.level.tankColor);
     Color lc = ParseHex(gGame.level.tankLegs);
     Color lbc = ParseHex(gGame.level.tankLabel);
@@ -898,8 +897,8 @@ static void DrawReactor(void) {
     if (!r->active) return;
     if (r->damage >= r->maxDamage && ((int)gGame.age % 6 < 3)) return;
 
-    float sx = SXf(gGame.reactor.x - gGame.arena.slideX);
-    float sy = SYf(gGame.reactor.y - gGame.arena.slideY);
+    float sx = SXf(gGame.reactor.x);
+    float sy = SYf(gGame.reactor.y);
     Color rc = ParseHex(gGame.level.reactorColor);
     Color cc = ParseHex(gGame.level.reactorChimney);
     Color dc = ParseHex(gGame.level.reactorDoor);
@@ -1678,6 +1677,7 @@ static void ReDraw(void) {
     } // end if !paused
 
     // ---- DRAWING ----
+    ShipScrollViewport();  // update viewport offset before any drawing
     UpdateAndDrawExplosions();
 
     // Enemies: draw + fire
@@ -1731,8 +1731,7 @@ static void ReDraw(void) {
     // Reactor
     DrawReactor();
 
-    // Ship scroll + draw
-    ShipScrollViewport();
+    // Ship + pod draw
     DrawPod();
     DrawShip();
 

@@ -1,0 +1,1 @@
+d:\thrustc\debug\thrust.exe
