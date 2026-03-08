@@ -9,8 +9,10 @@
 #include <time.h>
 
 // ===================== CONSTANTS =====================
-#define VIEWPORT_W   (960/2)
-#define VIEWPORT_H   (470)
+//#define VIEWPORT_W   1024/*(960)*/
+//#define VIEWPORT_H   717/*(470)*/
+#define VIEWPORT_W   960
+#define VIEWPORT_H   470
 #define HUD_H        51
 #define SCREEN_H     (VIEWPORT_H + HUD_H)
 #define GAME_FPS     60
@@ -46,6 +48,7 @@ static Color HexColor(unsigned r, unsigned g, unsigned b) {
 #define C_GRAY    HexColor(136,136,136)
 
 #define COL_YELLOW   CLITERAL(Color){255,255,0,255}
+#define COL_TEST   CLITERAL(Color){80,80,80,255}
 
 
 static Color ParseHex(const char *h) {
@@ -1146,13 +1149,17 @@ static void DrawVectorStr(const char *s, float x, float y, Color col) {
 static void DrawHUD(void) {
     // Scale everything to the actual window width (HUD was designed for 960px)
     float hs = (float)GetScreenWidth() / 960.0f;
+    int xoff = 0;
+    if (hs>1.0f){ hs=1.0f; xoff = (GetScreenWidth()-960)/2;}
 
     // Draw HUD background stretched to full window width
     int lvFrame = (gGame.curLevel - 1);
     if (lvFrame < 0) lvFrame = 0;
     if (lvFrame > 5) lvFrame = 5;
+
+
     Rectangle src = { lvFrame * 960.0f, 0.0f, 960.0f, 51.0f };
-    Rectangle dst = { 0.0f, 0.0f, (float)GetScreenWidth(), (float)HUD_H };
+    Rectangle dst = { xoff, 0.0f, 960.0f*hs, (float)HUD_H };
     DrawTexturePro(gHudTexture, src, dst, (Vector2){0,0}, 0.0f, WHITE);
 
     // Scale all number positions and glyphs to match the stretched HUD
@@ -1160,25 +1167,25 @@ static void DrawHUD(void) {
     rlScalef(hs, 1.0f, 1.0f);  // stretch x only; y stays at original pixel rows
 
     // Black out the number display areas so old values don't bleed through
-    DrawRectangle(94,  30, 150, 12, C_BLACK);
-    DrawRectangle(276, 30,  40, 12, C_BLACK);
-    DrawRectangle(426, 30,  90, 12, C_BLACK);
-    DrawRectangle(626, 30,  40, 12, C_BLACK);
-    DrawRectangle(667, 30, 200, 12, C_BLACK);
+    DrawRectangle(xoff+94,  30, 150, 12, C_BLACK);
+    DrawRectangle(xoff+276, 30,  40, 12, C_BLACK);
+    DrawRectangle(xoff+426, 30,  90, 12, C_BLACK);
+    DrawRectangle(xoff+626, 30,  40, 12, C_BLACK);
+    DrawRectangle(xoff+667, 30, 200, 12, C_BLACK);
 
     char buf[64];
 
     // Fuel (left-aligned at x=95)
     snprintf(buf, sizeof(buf), "%d", (int)gGame.fuel);
-    DrawVectorStr(buf, 95.0f, HUD_NUM_Y, C_YELLOW);
+    DrawVectorStr(buf, xoff+95.0f, HUD_NUM_Y, C_YELLOW);
 
     // Lives (centered at x=471)
     snprintf(buf, sizeof(buf), "%d", gGame.lives);
-    DrawVectorStr(buf, 471.0f - VectorStrWidth(buf)/2.0f, HUD_NUM_Y, C_YELLOW);
+    DrawVectorStr(buf, xoff+471.0f - VectorStrWidth(buf)/2.0f, HUD_NUM_Y, C_YELLOW);
 
     // Score (right-aligned at x=867)
     snprintf(buf, sizeof(buf), "%d", gGame.score);
-    DrawVectorStr(buf, 867.0f - VectorStrWidth(buf), HUD_NUM_Y, C_YELLOW);
+    DrawVectorStr(buf, xoff+867.0f - VectorStrWidth(buf), HUD_NUM_Y, C_YELLOW);
 
     // Countdown (centered at x=296 and x=646 when active)
     if (gGame.reactor.countdownStarted && gGame.reactor.countdown >= 0) {
@@ -1189,28 +1196,35 @@ static void DrawHUD(void) {
     }
 
     rlPopMatrix();
+
+    DrawFPS(0,51);
+
 }
 
 // ===================== MESSAGE DRAWING =====================
 static void DrawMessage(const char *msg) {
-    // Clear arena
-    DrawRectangle(0, HUD_H, VIEWPORT_W, VIEWPORT_H, C_BLACK);
+    // Clear full game area
+    DrawRectangle(0, HUD_H, GetScreenWidth(), GetScreenHeight() - HUD_H, C_BLACK);
+    int cx       = GetScreenWidth() / 2;
+//    int fontSize = (int)(12.0f * gZoom);  if (fontSize < 10) fontSize = 10;
+//    int lineH    = (int)(18.0f * gZoom);
+    int fontSize = (int)(18.0f * gZoom);  if (fontSize < 10) fontSize = 10;
+    int lineH    = (int)(24.0f * gZoom);
+    int y        = HUD_H + (int)(40.0f * gZoom);
     Color col = C_WHITE;
-    int lineH = 18, y = HUD_H + 40;
     const char *p = msg;
     char line[256];
     int li = 0;
     while (*p) {
         if (*p == '#' && *(p+1)) {
-            // Parse color
             char hex[8]; strncpy(hex, p, 7); hex[7]=0;
             col = ParseHex(hex);
             p += 7; continue;
         }
         if (*p == '\n') {
             line[li] = 0;
-            int tw = MeasureText(line, 12);
-            DrawText(line, VIEWPORT_W/2 - tw/2, y, 12, col);
+            int tw = MeasureText(line, fontSize);
+            DrawText(line, cx - tw/2, y, fontSize, col);
             y += lineH; li = 0; p++; continue;
         }
         if (li < 255) line[li++] = *p;
@@ -1218,8 +1232,8 @@ static void DrawMessage(const char *msg) {
     }
     if (li > 0) {
         line[li] = 0;
-        int tw = MeasureText(line, 12);
-        DrawText(line, VIEWPORT_W/2 - tw/2, y, 12, col);
+        int tw = MeasureText(line, fontSize);
+        DrawText(line, cx - tw/2, y, fontSize, col);
     }
 }
 
@@ -2049,11 +2063,14 @@ static void DoKeySelect(void) {
         "#ff0000shield:       #ffff00SPACE\n"
         "#ff0000pause:        #ffff00P\n"
         "#ff0000quit:         #ffff00ESCAPE\n\n"
-        "#ff00fforiginal game copyright jeremy c smith 1986\n"
-        "#00ff00recreated in javascript by jon combe\n\n"
+        //"#ff00fforiginal game copyright jeremy c smith 1986\n"
+        //"#00ff00recreated in javascript by jon combe\n\n"
+        "\n\n#20f020Thrust recreated in raylib by HCG 2026\n\n"
+
         "#ffffffpress space to start\n"
         "#888888press escape to quit\n\n"
-        "#00ffff%.52s", scroll);
+        //"#00ffff%.52s", scroll
+        );
     DrawMessage(gMsgBuf);
 
     // Advance scroll at JS rate: 1 step per 110ms = 2.2 logical ticks
@@ -2075,7 +2092,8 @@ static void DoKeySelect(void) {
 static void DoHighScoreTable(void) {
     char buf[2048];
     int off = 0;
-    off += snprintf(buf+off, sizeof(buf)-off, "\n#00ff00top eight thrusters\n\n#ffff00");
+    //off += snprintf(buf+off, sizeof(buf)-off, "\n#00ff00top eight thrusters\n\n#ffff00");
+    off += snprintf(buf+off, sizeof(buf)-off, "\n#00ff00hiscores (best of the best!)\n\n#ffff00");
     for (int i = 0; i < 8; i++) {
         off += snprintf(buf+off, sizeof(buf)-off, " %d. %8d  %s\n", i+1, gHighScores[i].score, gHighScores[i].name);
     }
@@ -2345,6 +2363,9 @@ int main(void) {
         gTick = GetFrameTime() * BASE_FPS;
         if (gTick > 3.0f) gTick = 3.0f;  // cap at 3 logical ticks (handles minimise/pause)
         gZoom = (float)(GetScreenHeight() - HUD_H) / VIEWPORT_H;
+
+        //gZoom = 1.0f/(470.0f/VIEWPORT_H);
+
         BeginDrawing();
         ClearBackground(C_BLACK);
         Thrust();
