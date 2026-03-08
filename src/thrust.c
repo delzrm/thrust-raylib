@@ -605,8 +605,8 @@ typedef struct {
 // ===================== HIGH SCORES =====================
 typedef struct { char name[16]; int score; } HScore;
 static HScore gHighScores[8] = {
-    {"spacelord",200000},{"admiral",150000},{"commodore",100000},
-    {"captain",50000},{"pilot",20000},{"cadet",15000},{"novice",5000},{"menace",1000}
+    {"HCG",200000},{"Delz",150000},{"Hayes",100000},
+    {"CHS",50000},{"RDA",20000},{"Super",15000},{"Space",5000},{"Towers",1000}
 };
 static int gHSNewIdx = -1;
 static char gHSNewName[16] = {0};
@@ -1316,36 +1316,37 @@ static void ShipScrollViewport(void) {
     Game *g = &gGame;
 
     if (s->active) {
-        // Scale velocity threshold and correction speed by 1/gZoom so behaviour is
-        // constant in visual space regardless of zoom level.
-        float velThresh  = 6.0f  / gZoom;
-        float slideSpeedX = 11.0f / gZoom;
-        float slideSpeedY = 10.0f / gZoom;
+        // For zoom > 1 (large window): divide by gZoom so the visual dead-zone stays
+        // constant in screen pixels regardless of zoom level.
+        // For zoom < 1 (small window): clamp to 1 so behaviour matches the gZoom=1 baseline —
+        // inflating thresholds beyond the viewport at low zoom makes tracking fail entirely.
+        float zoomScale   = fmaxf(gZoom, 1.0f);
+        float velThresh   = 6.0f  / zoomScale;
+        float slideSpeedX = 11.0f / zoomScale;
+        float slideSpeedY = 10.0f / zoomScale;
 
         if (fabsf(s->avx) > velThresh) ar->slideX = s->avx;
         else if (s->avx != 0) {
-            // Thresholds: centre on VIEWPORT_W/2, offsets proportional to viewport size,
-            // then divided by gZoom so the visual dead-zone stays constant on screen.
             float cx   = VIEWPORT_W * 0.5f;
-            float xOfs = VIEWPORT_W * (270.0f / 960.0f);  // 270 at 960, scales with width
-            if ((s->x - ar->vpOfsX) > cx + xOfs / gZoom) ar->slideX = slideSpeedX;
-            else if ((s->x - ar->vpOfsX) < cx - xOfs / gZoom) ar->slideX = -slideSpeedX;
+            float xOfs = fminf(VIEWPORT_W * (270.0f / 960.0f) / zoomScale, cx - 5.0f);
+            if ((s->x - ar->vpOfsX) > cx + xOfs) ar->slideX = slideSpeedX;
+            else if ((s->x - ar->vpOfsX) < cx - xOfs) ar->slideX = -slideSpeedX;
         }
         if (fabsf(s->avy) > velThresh) {
             ar->slideY = s->avy;
         } else {
             float cy  = VIEWPORT_H * 0.5f;
-            float yDn = VIEWPORT_H * (120.0f / 470.0f);   // 120 at 470, scales with height
-            float yUp = VIEWPORT_H * (140.0f / 470.0f);   // 140 at 470
-            if ((s->y - ar->vpOfsY) > cy + yDn / gZoom) ar->slideY = slideSpeedY;
-            else if ((s->y - ar->vpOfsY) < cy - yUp / gZoom) ar->slideY = -slideSpeedY;
+            float yDn = fminf(VIEWPORT_H * (120.0f / 470.0f) / zoomScale, cy - 5.0f);
+            float yUp = fminf(VIEWPORT_H * (140.0f / 470.0f) / zoomScale, cy - 5.0f);
+            if ((s->y - ar->vpOfsY) > cy + yDn) ar->slideY = slideSpeedY;
+            else if ((s->y - ar->vpOfsY) < cy - yUp) ar->slideY = -slideSpeedY;
             // Pod position check only when ship isn't fast-tracking — at high gZoom the pod
             // threshold would otherwise override upward velocity tracking and push the ship off screen.
             if (s->podConnected) {
-                float pDn = VIEWPORT_H * (150.0f / 470.0f);   // 150 at 470
-                float pUp = VIEWPORT_H * (170.0f / 470.0f);   // 170 at 470
-                if ((g->pod.y - ar->vpOfsY) > cy + pDn / gZoom) ar->slideY = slideSpeedY;
-                else if ((g->pod.y - ar->vpOfsY) < cy - pUp / gZoom) ar->slideY = -slideSpeedY;
+                float pDn = fminf(VIEWPORT_H * (150.0f / 470.0f) / zoomScale, cy - 5.0f);
+                float pUp = fminf(VIEWPORT_H * (170.0f / 470.0f) / zoomScale, cy - 5.0f);
+                if ((g->pod.y - ar->vpOfsY) > cy + pDn) ar->slideY = slideSpeedY;
+                else if ((g->pod.y - ar->vpOfsY) < cy - pUp) ar->slideY = -slideSpeedY;
             }
         }
     } else {
@@ -2351,7 +2352,11 @@ static void Thrust(void) {
 int main(void) {
     srand((unsigned)time(NULL));
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(VIEWPORT_W, SCREEN_H, "Thrust");
+
+    int windowSizeX = 1024;//320;
+    int windowSizeY = 768;//240;
+    InitWindow(windowSizeX, windowSizeY, "Thrust");
+    //InitWindow(VIEWPORT_W, SCREEN_H, "Thrust");
     SetTargetFPS(GAME_FPS);
     gHudTexture = LoadTexture("bg.gif");
 
