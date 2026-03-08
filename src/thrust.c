@@ -1,5 +1,6 @@
 // Thrust - C/raylib port of the JavaScript Thrust game
 #include "raylib.h"
+#include "rlgl.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -615,6 +616,7 @@ static int gFrameCount = 0;     // total frames elapsed (always incremented)
 static int gBonusScore = 0;
 static float gPlanetExpPos = 0.0f;
 static float gTick = 1.0f;  // dt * BASE_FPS, set each frame
+static float gZoom = 1.0f;  // global zoom scale (1.0 = normal)
 static Color gPlanetExpColors[] = {
     {255,255,0,255},{255,0,0,255},{0,255,0,255},{0,0,255,255},{255,0,255,255},
     {255,0,0,255},{0,255,0,255},{0,0,255,255},{255,0,255,255},{255,255,0,255}
@@ -634,10 +636,23 @@ static int gKeySelectTimer = 0;
 
 // ===================== DRAWING HELPERS =====================
 // Convert world coords to screen coords
-static int SX(float wx) { return (int)(wx - gGame.arena.vpOfsX); }
-static int SY(float wy) { return (int)(wy - gGame.arena.vpOfsY) + HUD_H; }
 static float SXf(float wx) { return wx - gGame.arena.vpOfsX; }
 static float SYf(float wy) { return wy - gGame.arena.vpOfsY + HUD_H; }
+static int SX(float wx) { return (int)SXf(wx); }
+static int SY(float wy) { return (int)SYf(wy); }
+
+// Apply/remove a zoom scale transform centred on the game viewport
+static void BeginZoom(void) {
+    if (gZoom == 1.0f) return;
+    rlPushMatrix();
+    rlTranslatef(VIEWPORT_W * 0.5f, HUD_H + VIEWPORT_H * 0.5f, 0.0f);
+    rlScalef(gZoom, gZoom, 1.0f);
+    rlTranslatef(-VIEWPORT_W * 0.5f, -(HUD_H + VIEWPORT_H * 0.5f), 0.0f);
+}
+static void EndZoom(void) {
+    if (gZoom == 1.0f) return;
+    rlPopMatrix();
+}
 
 static void DrawPolyOutline(V2 *pts, int n, Color col) {
     for (int i = 0; i < n; i++) {
@@ -651,12 +666,10 @@ static void DrawPolyOutline(V2 *pts, int n, Color col) {
 static void DrawLandscape(bool invisible) {
     LevelDef *lv = &gGame.level;
     Color col = invisible ? C_BLACK : ParseHex(lv->landscapeColor);
-    float vpX = gGame.arena.vpOfsX;
-    float vpY = gGame.arena.vpOfsY;
     // Use arena bottom in screen coords — matches JS fill-to-arenaH.
     // Avoids clamping terrain points to the screen edge, which causes self-intersecting
     // polygons when cave walls go leftward at the clamp boundary (level 2+).
-    float polyBottom = lv->arenaH - vpY + HUD_H;
+    float polyBottom = SYf(lv->arenaH);
 
     for (int rep = -1; rep <= 1; rep++) {
         float offX = rep * lv->arenaW;
@@ -664,17 +677,15 @@ static void DrawLandscape(bool invisible) {
         int n = 0;
 
         // Bottom-left corner
-        poly[n++] = (V2){lv->landscape[0].x + offX - vpX, polyBottom};
+        poly[n++] = (V2){SXf(lv->landscape[0].x + offX), polyBottom};
 
         // Terrain profile — no clamping: terrain Y <= arenaH always, so no self-intersection
         for (int i = 0; i < lv->lsCount; i++) {
-            float sx = lv->landscape[i].x + offX - vpX;
-            float sy = lv->landscape[i].y  - vpY + HUD_H;
-            poly[n++] = (V2){sx, sy};
+            poly[n++] = (V2){SXf(lv->landscape[i].x + offX), SYf(lv->landscape[i].y)};
         }
 
         // Bottom-right corner
-        poly[n++] = (V2){lv->landscape[lv->lsCount-1].x + offX - vpX, polyBottom};
+        poly[n++] = (V2){SXf(lv->landscape[lv->lsCount-1].x + offX), polyBottom};
 
         FillPolygon(poly, n, col);
     }
@@ -941,7 +952,6 @@ static void DrawDoor(Door *d, bool invisible) {
     const DoorDef *def = d->def;
     Color dc = invisible ? C_BLACK : ParseHex(def->doorColor);
     Color kc = ParseHex(def->keyColor);
-    float vpX = gGame.arena.vpOfsX, vpY = gGame.arena.vpOfsY;
 
     // Draw door polygon (current state)
     int s = d->state;
@@ -949,8 +959,8 @@ static void DrawDoor(Door *d, bool invisible) {
     if (vc >= 3) {
         V2 pts[MAX_DVERTS];
         for (int i = 0; i < vc; i++) {
-            pts[i].x = def->x + def->verts[s][i][0] - vpX;
-            pts[i].y = def->y + def->verts[s][i][1] - vpY + HUD_H;
+            pts[i].x = SXf(def->x + def->verts[s][i][0]);
+            pts[i].y = SYf(def->y + def->verts[s][i][1]);
         }
         FillPoly(pts, vc, dc);
     }
@@ -1277,17 +1287,25 @@ static void ShipScrollViewport(void) {
     if (s->active) {
         if (fabsf(s->avx) > 6) ar->slideX = s->avx;
         else if (s->avx != 0) {
-            if ((s->x - ar->vpOfsX) > 750) ar->slideX = 11;
-            else if ((s->x - ar->vpOfsX) < 210) ar->slideX = -11;
+            // Thresholds scale with zoom: offset from viewport centre divides by gZoom
+            // so the visual dead-zone stays the same size regardless of zoom level.
+            float txR = 480.0f + 270.0f / gZoom;   // 750 at zoom 1
+            float txL = 480.0f - 270.0f / gZoom;   // 210 at zoom 1
+            if ((s->x - ar->vpOfsX) > txR) ar->slideX = 11;
+            else if ((s->x - ar->vpOfsX) < txL) ar->slideX = -11;
         }
         if (fabsf(s->avy) > 6) ar->slideY = s->avy;
         else if (s->avy != 0) {
-            if ((s->y - ar->vpOfsY) > 355) ar->slideY = 10;
-            else if ((s->y - ar->vpOfsY) < 95) ar->slideY = -10;
+            float tyD = 235.0f + 120.0f / gZoom;   // 355 at zoom 1
+            float tyU = 235.0f - 140.0f / gZoom;   //  95 at zoom 1
+            if ((s->y - ar->vpOfsY) > tyD) ar->slideY = 10;
+            else if ((s->y - ar->vpOfsY) < tyU) ar->slideY = -10;
         }
         if (s->podConnected) {
-            if ((g->pod.y - ar->vpOfsY) > 385) ar->slideY = 10;
-            else if ((g->pod.y - ar->vpOfsY) < 65) ar->slideY = -10;
+            float tpD = 235.0f + 150.0f / gZoom;   // 385 at zoom 1
+            float tpU = 235.0f - 170.0f / gZoom;   //  65 at zoom 1
+            if ((g->pod.y - ar->vpOfsY) > tpD) ar->slideY = 10;
+            else if ((g->pod.y - ar->vpOfsY) < tpU) ar->slideY = -10;
         }
     } else {
         // Decelerate slide (exponential decay)
@@ -1678,6 +1696,7 @@ static void ReDraw(void) {
 
     // ---- DRAWING ----
     ShipScrollViewport();  // update viewport offset before any drawing
+    BeginZoom();
     UpdateAndDrawExplosions();
 
     // Enemies: draw + fire
@@ -1793,6 +1812,7 @@ static void ReDraw(void) {
 
     // Landscape
     DrawLandscape(invis);
+    EndZoom();
 
     // Paused overlay
     if (paused) {
@@ -1929,6 +1949,11 @@ static void CheckHighScore(bool immediate);  // forward declaration
 // ===================== INPUT HANDLING =====================
 static void HandleInput(void) {
     Ship *s = &gGame.ship;
+
+    // Zoom (works regardless of ship state)
+    if (IsKeyDown(KEY_EQUAL)) { gZoom *= 1.02f; if (gZoom > 3.0f) gZoom = 3.0f; }
+    if (IsKeyDown(KEY_MINUS))  { gZoom *= 0.98f; if (gZoom < 0.2f) gZoom = 0.2f; }
+
     if (!s->active) return;
 
     if (IsKeyPressed(BIND_PAUSE)) {
@@ -2130,6 +2155,7 @@ static void Thrust(void) {
     switch (gState) {
     case GS_BLACK_HOLE:
         DrawRectangle(0, HUD_H, VIEWPORT_W, VIEWPORT_H, C_BLACK);
+        BeginZoom();
         // Draw game objects behind black hole
         for (int i = 0; i < gGame.enemyCount; i++) DrawEnemy(&gGame.enemies[i]);
         for (int i = 0; i < gGame.tankCount; i++) if(gGame.tanks[i].fuelLoad>0) DrawTank(&gGame.tanks[i]);
@@ -2149,6 +2175,7 @@ static void Thrust(void) {
                 gGame.blackHoles[i] = gGame.blackHoles[--gGame.bhCount];
             }
         }
+        EndZoom();
         gGame.age += gTick;
         break;
 
