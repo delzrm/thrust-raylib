@@ -3,14 +3,16 @@
 #include <stdbool.h>
 
 // ---------------------------------------------------------------------------
-// Mesh2D – simple 2-D mesh: a flat array of vertices, line-index pairs, and
-// filled triangles.  All coordinates are in local (object) space; the origin
-// is the object's logical centre.
+// Mesh2D – simple 2-D mesh stored as pointers to static const data arrays.
+// All coordinates are in local (object) space; the origin is the object's
+// logical centre.
+//
+// Because verts/lines/tris are plain pointers the struct can be initialised
+// entirely at compile time from static const arrays, making the mesh data
+// easy to inspect, serialise, and edit with a future tool.
 // ---------------------------------------------------------------------------
 
-#define MESH2D_MAX_VERTS  200
-#define MESH2D_MAX_LINES  200   // pairs of vertex indices
-#define MESH2D_MAX_TRIS   100   // triples of vertex indices
+#define MESH2D_MAX_VERTS  200   // stack-buffer size inside DrawMesh2D
 
 typedef struct {
     float x, y;
@@ -26,14 +28,14 @@ typedef struct {
 } Tri2D;
 
 typedef struct {
-    Vert2D verts[MESH2D_MAX_VERTS];
-    int    vertCount;
+    const Vert2D *verts;
+    int           vertCount;
 
-    Line2D lines[MESH2D_MAX_LINES];
-    int    lineCount;
+    const Line2D *lines;
+    int           lineCount;
 
-    Tri2D  tris[MESH2D_MAX_TRIS];
-    int    triCount;
+    const Tri2D  *tris;
+    int           triCount;
 } Mesh2D;
 
 // ---------------------------------------------------------------------------
@@ -55,7 +57,8 @@ void DrawMesh2D(const Mesh2D *mesh, Vector2 pos, float rotation, float scale,
 const Mesh2D *GetShipMesh(void);
 const Mesh2D *GetPodMesh(void);        // pod circle only
 const Mesh2D *GetPodBaseMesh(void);    // landing legs / foot-plate
-const Mesh2D *GetTankMesh(void);       // fuel tank body + legs
+const Mesh2D *GetTankMesh(void);       // fuel tank body arcs + sides
+const Mesh2D *GetTankLegMesh(void);    // fuel tank legs (separate colour)
 const Mesh2D *GetTankLabelMesh(void);  // "FUEL" pixel-art label
 const Mesh2D *GetEnemyBodyMesh(void);
 const Mesh2D *GetEnemyDomeMesh(void);  // arc portion only

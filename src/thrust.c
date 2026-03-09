@@ -1357,7 +1357,7 @@ static void ShipCalcPosition(void) {
         Pod *pod = &g->pod;
         pod->prevX = pod->x; pod->prevY = pod->y;
         pod->x += pod->vx * gTick;
-        pod->y += pod->vy * gTick + 0.1f * gTick;
+        pod->y += pod->vy * gTick + g->level.gravity * gTick;
 
         float dx = pod->x - s->x, dy = pod->y - s->y;
         float dlen = sqrtf(dx*dx + dy*dy);
@@ -1376,9 +1376,15 @@ static void ShipCalcPosition(void) {
 
     // Check upper limit (exit) - JS: ship.y <= iUpperLimit (= viewport height = 470)
     Arena *ar = &g->arena;
-    if (s->y <= (float)VIEWPORT_H && s->active) {
+
+    bool skipLevel = false;
+    if (IsKeyPressed(KEY_EQUAL)){
+        skipLevel = true;
+    }
+
+    if ((s->y <= (float)VIEWPORT_H || skipLevel) && s->active) {
         g->pod.active = false;
-        if (s->podConnected) {
+        if (s->podConnected || skipLevel) {
             AddBlackHole(s->x, s->y, C_YELLOW, "MissionComplete");
             AddBlackHole(g->pod.x, g->pod.y, ParseHex(g->level.podColor), "MissionComplete");
             gBonusScore = (g->reactor.countdown < 10) ?
@@ -2068,6 +2074,7 @@ static void CreateGame(void) {
     gGame.age   = 0;
     gMsgBuf[0]  = '\0';
     LoadLevel(1);
+    //LoadLevel(7);
     gPauseActive = false;
 }
 
