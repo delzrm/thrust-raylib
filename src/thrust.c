@@ -2462,6 +2462,10 @@ int main(void) {
         if (IsKeyPressed(KEY_R)){
             newRender = !newRender;
         }
+        if (IsKeyPressed(KEY_F1)){
+            ToggleFullscreen();
+        }
+
         //gZoom = 1.0f/(470.0f/VIEWPORT_H);
 
         BeginDrawing();
