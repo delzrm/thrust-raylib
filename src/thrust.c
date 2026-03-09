@@ -8,6 +8,10 @@
 #include <stdbool.h>
 #include <time.h>
 
+// stop console window popping up in release
+#if defined(WIN32) && !defined(_DEBUG)
+#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
+#endif
 // ===================== CONSTANTS =====================
 //#define VIEWPORT_W   1024/*(960)*/
 //#define VIEWPORT_H   717/*(470)*/
@@ -1191,8 +1195,8 @@ static void DrawHUD(void) {
     if (gGame.reactor.countdownStarted && gGame.reactor.countdown >= 0) {
         snprintf(buf, sizeof(buf), "%d", gGame.reactor.countdown);
         float cw = VectorStrWidth(buf);
-        DrawVectorStr(buf, 296.0f - cw/2.0f, HUD_NUM_Y, C_GREEN);
-        DrawVectorStr(buf, 646.0f - cw/2.0f, HUD_NUM_Y, C_GREEN);
+        DrawVectorStr(buf, xoff+296.0f - cw/2.0f, HUD_NUM_Y, C_GREEN);
+        DrawVectorStr(buf, xoff+646.0f - cw/2.0f, HUD_NUM_Y, C_GREEN);
     }
 
     rlPopMatrix();
@@ -2353,9 +2357,11 @@ int main(void) {
     srand((unsigned)time(NULL));
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 
-    int windowSizeX = 1024;//320;
-    int windowSizeY = 768;//240;
-    InitWindow(windowSizeX, windowSizeY, "Thrust");
+    int windowSizeX = 1024;
+    int windowSizeY = 768;
+    InitWindow(windowSizeX, windowSizeY, "ThrustHCG");
+    //ToggleFullscreen();
+
     //InitWindow(VIEWPORT_W, SCREEN_H, "Thrust");
     SetTargetFPS(GAME_FPS);
     gHudTexture = LoadTexture("bg.gif");
