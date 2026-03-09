@@ -1,6 +1,7 @@
 // Thrust - C/raylib port of the JavaScript Thrust game
 #include "raylib.h"
 #include "rlgl.h"
+#include "Draw.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -627,6 +628,9 @@ static int gBonusScore = 0;
 static float gPlanetExpPos = 0.0f;
 static float gTick = 1.0f;  // dt * BASE_FPS, set each frame
 static float gZoom = 1.0f;  // global zoom scale (1.0 = normal)
+
+static bool newRender = false; // use new mesh render
+
 static Color gPlanetExpColors[] = {
     {255,255,0,255},{255,0,0,255},{0,255,0,255},{0,0,255,255},{255,0,255,255},
     {255,0,0,255},{0,255,0,255},{0,0,255,255},{255,0,255,255},{255,255,0,255}
@@ -760,6 +764,26 @@ static void DrawShip(void) {
     float theta = DTR(s->ori);
     float cx = SXf(s->x), cy = SYf(s->y);
 
+    if (newRender) {
+        DrawShipMesh(cx, cy, theta, C_YELLOW);
+        // Shield and refuelling lines are not part of the mesh — draw them as before.
+        if (s->shield && ((int)gGame.age % 2 == 0)) {
+            Color sc = ParseHex(gGame.level.shieldColor);
+            for (int seg = 0; seg < 3; seg++) {
+                float a1 = theta + seg * 2.0f * PI / 3.0f;
+                float a2 = theta + (seg+1) * 2.0f * PI / 3.0f;
+                V2 oc = TPoint(3, 0, theta, cx, cy);
+                DrawArcLines(oc.x, oc.y, 17, a1, a2, sc);
+            }
+        }
+        if (s->refuelling) {
+            Color rc = ParseHex(gGame.level.refuelColor);
+            DrawLine((int)(cx+11),(int)(cy+16),(int)(cx+34),(int)(cy+80), rc);
+            DrawLine((int)(cx-11),(int)(cy+16),(int)(cx-34),(int)(cy+80), rc);
+        }
+        return;
+    }
+
     // Ship outline
     for (int i = 0; i < SHIP_VCOUNT; i++) {
         int j = (i+1) % SHIP_VCOUNT;
@@ -800,6 +824,12 @@ static void DrawPod(void) {
     if (!p->active) return;
     float px = SXf(p->x), py = SYf(p->y);
     Color pc = ParseHex(gGame.level.podColor);
+
+    if (newRender) {
+        Color bc = ParseHex(gGame.level.podBaseColor);
+        DrawPodMesh(px, py, !gGame.ship.podConnected, pc, bc);
+        return;
+    }
 
     // Pod body: 3 arcs forming a circle (approximated as circle)
     DrawCircleLines((int)px,(int)py,(int)p->radius, pc);
@@ -855,6 +885,15 @@ static void InitEnemy(Enemy *e, EnemyDef *d) {
 
 static void DrawEnemy(Enemy *e) {
     Color ec = ParseHex(gGame.level.enemyColor);
+
+    if (newRender) {
+        // Recover world-space centre from dome: dome = (cx + 19*cos(ori), cy + 19*sin(ori))
+        float cx = e->dome.x - 19.0f * cosf(e->ori);
+        float cy = e->dome.y - 19.0f * sinf(e->ori);
+        DrawEnemyMesh(SXf(cx), SYf(cy), e->ori, ec);
+        return;
+    }
+
     // Body outline
     for (int i = 0; i < 6; i++) {
         int j = (i+1) % 6;
@@ -888,11 +927,26 @@ static void DrawTank(Tank *t) {
     Color lc = ParseHex(gGame.level.tankLegs);
     Color lbc = ParseHex(gGame.level.tankLabel);
 
+    if (newRender) {
+        DrawTankMesh(sx, sy, tc, lc, lbc);
+        return;
+    }
+
     // Tank body: two arcs - anticlockwise in JS canvas convention
     // arc(0,25, 40, DTR(24), DTR(336), true)  -> sweep from DTR(24) down to DTR(336)-2π
     // arc(0,-30, 40, DTR(204), DTR(156), true) -> sweep from DTR(204) down to DTR(156)
     DrawArcLines(sx, sy+25, 40, DTR(24),  DTR(336) - 2.0f*PI, tc);
     DrawArcLines(sx, sy-30, 40, DTR(204), DTR(156), tc);
+    // Connecting lines: JS canvas implicitly lines from one arc end to the next arc start.
+    // Right: lower-arc start (DTR(24) from centre y+25) → upper-arc end (DTR(156) from centre y-30)
+    // Left:  lower-arc end  (DTR(336)-2π)              → upper-arc start (DTR(204))
+    {
+        float ex = 40.0f * cosf(DTR(24));           // ≈ +16.27
+        float by = 25.0f + 40.0f * sinf(DTR(24));   // ≈ -11.54  (lower arc endpoint y)
+        float ty = -30.0f + 40.0f * sinf(DTR(156)); // ≈  +6.54  (upper arc endpoint y)
+        DrawLine((int)(sx + ex), (int)(sy + ty), (int)(sx + ex), (int)(sy + by), tc);
+        DrawLine((int)(sx - ex), (int)(sy + ty), (int)(sx - ex), (int)(sy + by), tc);
+    }
 
     // Legs
     DrawLine((int)(sx-11),(int)(sy+20),(int)(sx-8),(int)(sy+9), lc);
@@ -919,6 +973,29 @@ static void DrawTank(Tank *t) {
 
 // ===================== REACTOR DRAWING =====================
 static void DrawReactor(void) {
+    if (newRender){
+        Reactor *r = &gGame.reactor;
+        if (r->active && !(r->damage >= r->maxDamage && ((int)gGame.age % 6 < 3))) {
+            float rsx = SXf(r->x), rsy = SYf(r->y);
+            if (r->damage > 0) r->damage -= 0.02f;
+            bool drawSmoke = (gGame.age > r->drawSmoke);
+            DrawReactorMesh(rsx, rsy,
+                            ParseHex(gGame.level.reactorColor),
+                            ParseHex(gGame.level.reactorChimney),
+                            ParseHex(gGame.level.reactorDoor),
+                            r->smokeY, drawSmoke,
+                            r->damage, r->maxDamage);
+            if (drawSmoke) {
+                for (int i = 0; i < 2; i++) {
+                    r->smokeY[i] -= (1 + r->damage / 100.0f / 6.0f);
+                    if (r->smokeY[i] < -36) r->smokeY[i] += 20;
+                }
+            }
+        }
+        return;
+    }
+
+
     Reactor *r = &gGame.reactor;
     if (!r->active) return;
     if (r->damage >= r->maxDamage && ((int)gGame.age % 6 < 3)) return;
@@ -2375,6 +2452,9 @@ int main(void) {
         if (gTick > 3.0f) gTick = 3.0f;  // cap at 3 logical ticks (handles minimise/pause)
         gZoom = (float)(GetScreenHeight() - HUD_H) / VIEWPORT_H;
 
+        if (IsKeyPressed(KEY_R)){
+            newRender = !newRender;
+        }
         //gZoom = 1.0f/(470.0f/VIEWPORT_H);
 
         BeginDrawing();
