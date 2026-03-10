@@ -6,6 +6,7 @@
 #include "Collision.h"
 #include "Types.h"
 #include "VectorFont.h"
+#include "HUD.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,7 +23,7 @@
 //#define VIEWPORT_H   717/*(470)*/
 #define VIEWPORT_W   960
 #define VIEWPORT_H   470
-#define HUD_H        51
+// HUD_H is defined in HUD.h
 #define SCREEN_H     (VIEWPORT_H + HUD_H)
 #define GAME_FPS     60
 #define BASE_FPS     20.0f  // original physics rate; all per-frame increments scaled by gTick = dt*BASE_FPS
@@ -657,101 +658,7 @@ static bool DrawBlackHole(BlackHole *bh) {
     return bh->blocks[0] < 0;
 }
 
-// ===================== HUD DRAWING =====================
-// bg.gif is 5760×51: 6 frames of 960px, one per base level (1-6).
-// JS positions canvases at top=30 within the 51px HUD div.
-// Numbers drawn at y=30 (HUD_NUM_Y) to overlay on the bg.gif labels/borders.
-#define HUD_NUM_Y  30.0f
-static void DrawHUD(void) {
-    // Scale everything to the actual window width (HUD was designed for 960px)
-    float hs = (float)GetScreenWidth() / 960.0f;
-    int xoff = 0;
-    if (hs>1.0f){ hs=1.0f; xoff = (GetScreenWidth()-960)/2;}
-
-    // Draw HUD background stretched to full window width
-    int lvFrame = (gGame.curLevel - 1);
-    if (lvFrame < 0) lvFrame = 0;
-    if (lvFrame > 5) lvFrame = 5;
-
-
-    Rectangle src = { lvFrame * 960.0f, 0.0f, 960.0f, 51.0f };
-    Rectangle dst = { xoff, 0.0f, 960.0f*hs, (float)HUD_H };
-    DrawTexturePro(gHudTexture, src, dst, (Vector2){0,0}, 0.0f, WHITE);
-
-    // Scale all number positions and glyphs to match the stretched HUD
-    rlPushMatrix();
-    rlScalef(hs, 1.0f, 1.0f);  // stretch x only; y stays at original pixel rows
-
-    // Black out the number display areas so old values don't bleed through
-    DrawRectangle(xoff+94,  30, 150, 12, C_BLACK);
-    DrawRectangle(xoff+276, 30,  40, 12, C_BLACK);
-    DrawRectangle(xoff+426, 30,  90, 12, C_BLACK);
-    DrawRectangle(xoff+626, 30,  40, 12, C_BLACK);
-    DrawRectangle(xoff+667, 30, 200, 12, C_BLACK);
-
-    char buf[64];
-
-    // Fuel (left-aligned at x=95)
-    snprintf(buf, sizeof(buf), "%d", (int)gGame.fuel);
-    DrawVectorStr(buf, xoff+95.0f, HUD_NUM_Y, C_YELLOW);
-
-    // Lives (centered at x=471)
-    snprintf(buf, sizeof(buf), "%d", gGame.lives);
-    DrawVectorStr(buf, xoff+471.0f - VectorStrWidth(buf)/2.0f, HUD_NUM_Y, C_YELLOW);
-
-    // Score (right-aligned at x=867)
-    snprintf(buf, sizeof(buf), "%d", gGame.score);
-    DrawVectorStr(buf, xoff+867.0f - VectorStrWidth(buf), HUD_NUM_Y, C_YELLOW);
-
-    // Countdown (centered at x=296 and x=646 when active)
-    if (gGame.reactor.countdownStarted && gGame.reactor.countdown >= 0) {
-        snprintf(buf, sizeof(buf), "%d", gGame.reactor.countdown);
-        float cw = VectorStrWidth(buf);
-        DrawVectorStr(buf, xoff+296.0f - cw/2.0f, HUD_NUM_Y, C_GREEN);
-        DrawVectorStr(buf, xoff+646.0f - cw/2.0f, HUD_NUM_Y, C_GREEN);
-    }
-
-    rlPopMatrix();
-
-    DrawFPS(0,51);
-
-}
-
-// ===================== MESSAGE DRAWING =====================
-static void DrawMessage(const char *msg) {
-    // Clear full game area
-    DrawRectangle(0, HUD_H, GetScreenWidth(), GetScreenHeight() - HUD_H, C_BLACK);
-    int cx       = GetScreenWidth() / 2;
-//    int fontSize = (int)(12.0f * gZoom);  if (fontSize < 10) fontSize = 10;
-//    int lineH    = (int)(18.0f * gZoom);
-    int fontSize = (int)(18.0f * gZoom);  if (fontSize < 10) fontSize = 10;
-    int lineH    = (int)(24.0f * gZoom);
-    int y        = HUD_H + (int)(40.0f * gZoom);
-    Color col = C_WHITE;
-    const char *p = msg;
-    char line[256];
-    int li = 0;
-    while (*p) {
-        if (*p == '#' && *(p+1)) {
-            char hex[8]; strncpy(hex, p, 7); hex[7]=0;
-            col = ParseHex(hex);
-            p += 7; continue;
-        }
-        if (*p == '\n') {
-            line[li] = 0;
-            int tw = MeasureText(line, fontSize);
-            DrawText(line, cx - tw/2, y, fontSize, col);
-            y += lineH; li = 0; p++; continue;
-        }
-        if (li < 255) line[li++] = *p;
-        p++;
-    }
-    if (li > 0) {
-        line[li] = 0;
-        int tw = MeasureText(line, fontSize);
-        DrawText(line, cx - tw/2, y, fontSize, col);
-    }
-}
+// HUD and message drawing are in HUD.h / HUD.c
 
 // ===================== SHIP PHYSICS =====================
 static void ShipCalcPosition(void) {
@@ -1560,7 +1467,7 @@ static void HandleInput(void) {
 // ===================== MAIN GAME STATE MACHINE =====================
 
 static void ShowMessage(const char *msg) {
-    DrawMessage(msg);
+    DrawMessage(msg, gZoom);
 }
 
 static void DoKeySelect(void) {
@@ -1595,7 +1502,7 @@ static void DoKeySelect(void) {
         "#888888press escape to quit\n\n"
         //"#00ffff%.52s", scroll
         );
-    DrawMessage(gMsgBuf);
+    DrawMessage(gMsgBuf, gZoom);
 
     // Advance scroll at JS rate: 1 step per 110ms = 2.2 logical ticks
     scrollAcc += gTick;
@@ -1622,7 +1529,7 @@ static void DoHighScoreTable(void) {
         off += snprintf(buf+off, sizeof(buf)-off, " %d. %8d  %s\n", i+1, gHighScores[i].score, gHighScores[i].name);
     }
     snprintf(buf+off, sizeof(buf)-off, "\n#ffffffpress space to start\n\n");
-    DrawMessage(buf);
+    DrawMessage(buf, gZoom);
 }
 
 static void CheckHighScore(bool immediate) {
@@ -1696,7 +1603,7 @@ static void DoHighScoreEdit(void) {
         }
     }
     snprintf(buf+off, sizeof(buf)-off, "\n#00ff00please enter your name\n\n");
-    DrawMessage(buf);
+    DrawMessage(buf, gZoom);
 }
 
 static void Thrust(void) {
@@ -1761,7 +1668,7 @@ static void Thrust(void) {
         gState = GS_DO_NOTHING;
         snprintf(gMsgBuf, sizeof(gMsgBuf), "%sgame over\n\n",
             gGame.fuel < 1 ? "#ff0000out of fuel\n\n#00ff00" : "#00ff00");
-        DrawMessage(gMsgBuf);
+        DrawMessage(gMsgBuf, gZoom);
         CheckHighScore(false);
         break;
 
@@ -1791,7 +1698,7 @@ static void Thrust(void) {
             gGame.score += gBonusScore;
             gBonusScore = 0;
         }
-        DrawMessage(gMsgBuf);
+        DrawMessage(gMsgBuf, gZoom);
         break;
     }
 
@@ -1810,7 +1717,7 @@ static void Thrust(void) {
         const char *b = gLevels[gGame.prevLevel > 0 ? gGame.prevLevel-1 : 0].endColorBot;
         snprintf(gMsgBuf,sizeof(gMsgBuf),"%splanet destroyed\n\n%smission %s%d%s failed\n\n%sno bonus",
             t, m, b, gGame.visLevel-1, m, b);
-        DrawMessage(gMsgBuf);
+        DrawMessage(gMsgBuf, gZoom);
         break;
     }
 
@@ -1824,14 +1731,14 @@ static void Thrust(void) {
         SetPause(GS_START_LIFE, 3000);
         gState = GS_DO_NOTHING;
         snprintf(gMsgBuf, sizeof(gMsgBuf), "#00ff00mission incomplete\n\n");
-        DrawMessage(gMsgBuf);
+        DrawMessage(gMsgBuf, gZoom);
         break;
 
     case GS_CHECK_LEVEL:
         switch (gGame.visLevel) {
-            case 7:  gState=GS_DO_NOTHING; snprintf(gMsgBuf,sizeof(gMsgBuf),"#00ff00reverse gravity"); DrawMessage(gMsgBuf); SetPause(GS_START_LIFE,3000); break;
-            case 13: gState=GS_DO_NOTHING; snprintf(gMsgBuf,sizeof(gMsgBuf),"#00ff00normal gravity\n\ninvisible planet"); DrawMessage(gMsgBuf); SetPause(GS_START_LIFE,3000); break;
-            case 19: gState=GS_DO_NOTHING; snprintf(gMsgBuf,sizeof(gMsgBuf),"#00ff00reverse gravity\n\ninvisible planet"); DrawMessage(gMsgBuf); SetPause(GS_START_LIFE,3000); break;
+            case 7:  gState=GS_DO_NOTHING; snprintf(gMsgBuf,sizeof(gMsgBuf),"#00ff00reverse gravity"); DrawMessage(gMsgBuf, gZoom); SetPause(GS_START_LIFE,3000); break;
+            case 13: gState=GS_DO_NOTHING; snprintf(gMsgBuf,sizeof(gMsgBuf),"#00ff00normal gravity\n\ninvisible planet"); DrawMessage(gMsgBuf, gZoom); SetPause(GS_START_LIFE,3000); break;
+            case 19: gState=GS_DO_NOTHING; snprintf(gMsgBuf,sizeof(gMsgBuf),"#00ff00reverse gravity\n\ninvisible planet"); DrawMessage(gMsgBuf, gZoom); SetPause(GS_START_LIFE,3000); break;
             default: gState = GS_START_LIFE; break;
         }
         break;
@@ -1859,7 +1766,7 @@ static void Thrust(void) {
 
     case GS_DO_NOTHING:
         // raylib clears each frame; redraw the last message so it stays visible
-        DrawHUD();
+        DrawHUD(gGame.curLevel, gGame.fuel, gGame.lives, gGame.score, gGame.reactor.countdownStarted, gGame.reactor.countdown, gHudTexture);
         if (gMsgBuf[0]) ShowMessage(gMsgBuf);
         // Only allow space-to-restart when there is no pending auto-transition (gPauseActive).
         // Every mission-complete/failed/incomplete path through DO_NOTHING has an active timer,
@@ -1903,7 +1810,7 @@ int main(void) {
         BeginDrawing();
         ClearBackground(C_BLACK);
         Thrust();
-        DrawHUD();
+        DrawHUD(gGame.curLevel, gGame.fuel, gGame.lives, gGame.score, gGame.reactor.countdownStarted, gGame.reactor.countdown, gHudTexture);
         EndDrawing();
     }
 
