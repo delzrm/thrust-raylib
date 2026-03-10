@@ -4,6 +4,8 @@
 #include "Draw.h"
 #include "Levels.h"
 #include "Collision.h"
+#include "Types.h"
+#include "VectorFont.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,8 +63,6 @@ static Color ParseHex(const char *h) {
 // ===================== MATH UTILITIES =====================
 static float DTR(float deg) { return (deg - 90.0f) * DEG2RAD; }  // JS DegreesToRadians
 static float RTD(float rad) { return rad * RAD2DEG; }
-
-typedef struct { float x, y; } V2;
 
 static V2 RotObj(float lx, float ly, float ori, float px, float py) {
     float r = sqrtf(lx*lx + ly*ly);
@@ -655,77 +655,6 @@ static bool DrawBlackHole(BlackHole *bh) {
     else              bh->blocks[0] -= 2.0f * gTick;
     for (int i = 1; i < 5; i++) bh->blocks[i] = bh->blocks[i-1] / 1.6f;
     return bh->blocks[0] < 0;
-}
-
-// ===================== VECTOR FONT =====================
-// Matches classText.js: TEXT_SPACING=2.3, letters on a 7×5 grid
-#define VF_SCALE  2.3f
-#define VF_W      (VF_SCALE * 7.0f)   // 16.1px per glyph
-#define VF_ADV    (VF_W + VF_SCALE)   // 18.4px advance per character
-
-static void DrawVectorGlyph(char ch, float ox, float oy, Color col) {
-#define P(px,py) (V2){ox + (px)*VF_SCALE, oy + (py)*VF_SCALE}
-    switch (ch) {
-    case '0': {
-        V2 a[]={P(0,0),P(7,0),P(7,5),P(5,5),P(5,1),P(2,1),P(2,5),P(0,5)};
-        V2 b[]={P(0,5),P(7,5),P(7,3),P(3,3),P(3,4),P(0,4)};
-        FillPolygon(a,8,col); FillPolygon(b,6,col);
-    } break;
-    case '1': {
-        V2 a[]={P(0,0),P(4,0),P(4,3),P(7,3),P(7,5),P(0,5),P(0,3),P(2,3),P(2,1),P(0,1)};
-        FillPolygon(a,10,col);
-    } break;
-    case '2': {
-        V2 a[]={P(1,0),P(7,0),P(7,3),P(3,3),P(3,4),P(7,4),P(7,5),P(0,5),P(0,2),P(5,2),P(5,1),P(1,1)};
-        FillPolygon(a,12,col);
-    } break;
-    case '3': {
-        V2 a[]={P(1,0),P(5,0),P(5,2),P(7,2),P(7,5),P(0,5),P(0,4),P(3,4),P(3,3),P(1,3),P(1,2),P(3,2),P(3,1),P(1,1)};
-        FillPolygon(a,14,col);
-    } break;
-    case '4': {
-        V2 a[]={P(0,0),P(2,0),P(2,2),P(4,2),P(4,1),P(7,1),P(7,5),P(4,5),P(4,3),P(0,3)};
-        FillPolygon(a,10,col);
-    } break;
-    case '5': {
-        V2 a[]={P(0,0),P(5,0),P(5,1),P(2,1),P(2,2),P(7,2),P(7,5),P(0,5),P(0,4),P(4,4),P(4,3),P(0,3)};
-        FillPolygon(a,12,col);
-    } break;
-    case '6': {
-        V2 a[]={P(0,0),P(4,0),P(4,1),P(2,1),P(2,2),P(7,2),P(7,3),P(2,3),P(2,5),P(0,5)};
-        V2 b[]={P(1,2),P(7,2),P(7,5),P(1,5),P(1,4),P(4,4),P(4,3),P(1,3)};
-        FillPolygon(a,10,col); FillPolygon(b,8,col);
-    } break;
-    case '7': {
-        V2 a[]={P(0,0),P(7,0),P(7,3),P(4,3),P(4,5),P(1,5),P(1,2),P(5,2),P(5,1),P(1,1)};
-        FillPolygon(a,10,col);
-    } break;
-    case '8': {
-        V2 a[]={P(1,0),P(6,0),P(6,1),P(3,1),P(3,2),P(5,2),P(5,3),P(3,3),P(3,4),P(7,4),P(7,5),P(0,5),P(0,2),P(1,2)};
-        V2 b[]={P(1,0),P(6,0),P(6,2),P(7,2),P(7,5),P(4,5),P(4,1),P(1,1)};
-        FillPolygon(a,14,col); FillPolygon(b,8,col);
-    } break;
-    case '9': {
-        V2 a[]={P(0,0),P(7,0),P(7,1),P(2,1),P(2,2),P(4,2),P(4,3),P(0,3)};
-        V2 b[]={P(0,0),P(7,0),P(7,5),P(3,5),P(3,2),P(5,2),P(5,1),P(0,1)};
-        FillPolygon(a,8,col); FillPolygon(b,8,col);
-    } break;
-    default: break;
-    }
-#undef P
-}
-
-static float VectorStrWidth(const char *s) {
-    int n = (int)strlen(s);
-    if (n == 0) return 0.0f;
-    return n * VF_ADV - VF_SCALE;  // = n*VF_W + (n-1)*VF_SCALE
-}
-
-static void DrawVectorStr(const char *s, float x, float y, Color col) {
-    for (; *s; s++) {
-        DrawVectorGlyph(*s, x, y, col);
-        x += VF_ADV;
-    }
 }
 
 // ===================== HUD DRAWING =====================
