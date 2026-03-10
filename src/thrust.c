@@ -315,8 +315,6 @@ static float gPlanetExpPos = 0.0f;
 static float gTick = 1.0f;  // dt * BASE_FPS, set each frame
 static float gZoom = 1.0f;  // global zoom scale (1.0 = normal)
 
-static bool newRender = false; // use new mesh render
-
 static Color gPlanetExpColors[] = {
     {255,255,0,255},{255,0,0,255},{0,255,0,255},{0,0,255,255},{255,0,255,255},
     {255,0,0,255},{0,255,0,255},{0,0,255,255},{255,0,255,255},{255,255,0,255}
@@ -438,59 +436,25 @@ static void CalcShipCollisionPoints(void) {
     s->cWingP = RotObj(-14.5f, -1, a, s->x, s->y);
 }
 
-// Local ship shape vertices (canvas-style: x=right from nose, y=down from center)
-static float shipVerts[][2] = {
-    {18,0},{0,10},{-1,14.5f},{-11,5.5f},{-8,2},{-8,-2},{-11,-5.5f},{-1,-14.5f},{0,-10}
-};
-#define SHIP_VCOUNT 9
-
 static void DrawShip(void) {
     Ship *s = &gGame.ship;
     if (!s->active) return;
     float theta = DTR(s->ori);
     float cx = SXf(s->x), cy = SYf(s->y);
 
-    if (newRender) {
-        DrawShipMesh(cx, cy, theta, C_YELLOW);
-        // Shield and refuelling lines are not part of the mesh — draw them as before.
-        if (s->shield && ((int)gGame.age % 2 == 0)) {
-            Color sc = ParseHex(gGame.level.shieldColor);
-            for (int seg = 0; seg < 3; seg++) {
-                float a1 = theta + seg * 2.0f * PI / 3.0f;
-                float a2 = theta + (seg+1) * 2.0f * PI / 3.0f;
-                V2 oc = TPoint(3, 0, theta, cx, cy);
-                DrawArcLines(oc.x, oc.y, 17, a1, a2, sc);
-            }
-        }
-        if (s->refuelling) {
-            Color rc = ParseHex(gGame.level.refuelColor);
-            DrawLine((int)(cx+11),(int)(cy+16),(int)(cx+34),(int)(cy+80), rc);
-            DrawLine((int)(cx-11),(int)(cy+16),(int)(cx-34),(int)(cy+80), rc);
-        }
-        return;
-    }
+    DrawShipMesh(cx, cy, theta, C_YELLOW);
 
-    // Ship outline
-    for (int i = 0; i < SHIP_VCOUNT; i++) {
-        int j = (i+1) % SHIP_VCOUNT;
-        V2 p0 = TPoint(shipVerts[i][0], shipVerts[i][1], theta, cx, cy);
-        V2 p1 = TPoint(shipVerts[j][0], shipVerts[j][1], theta, cx, cy);
-        DrawLine((int)p0.x,(int)p0.y,(int)p1.x,(int)p1.y, C_YELLOW);
-    }
-
-    // Shield
+    // Shield arcs — not part of the mesh
     if (s->shield && ((int)gGame.age % 2 == 0)) {
         Color sc = ParseHex(gGame.level.shieldColor);
         for (int seg = 0; seg < 3; seg++) {
             float a1 = theta + seg * 2.0f * PI / 3.0f;
             float a2 = theta + (seg+1) * 2.0f * PI / 3.0f;
-            // Center of shield arc offset by (3,0) in local
             V2 oc = TPoint(3, 0, theta, cx, cy);
             DrawArcLines(oc.x, oc.y, 17, a1, a2, sc);
         }
     }
 
-    // Refuelling lines — JS draws these in screen space with no ship rotation applied
     if (s->refuelling) {
         Color rc = ParseHex(gGame.level.refuelColor);
         DrawLine((int)(cx+11),(int)(cy+16),(int)(cx+34),(int)(cy+80), rc);
@@ -510,48 +474,8 @@ static void DrawPod(void) {
     if (!p->active) return;
     float px = SXf(p->x), py = SYf(p->y);
     Color pc = ParseHex(gGame.level.podColor);
-
-    if (newRender) {
-        Color bc = ParseHex(gGame.level.podBaseColor);
-        DrawPodMesh(px, py, !gGame.ship.podConnected, pc, bc);
-        return;
-    }
-
-    // Pod body: 3 arcs forming a circle (approximated as circle)
-    DrawCircleLines((int)px,(int)py,(int)p->radius, pc);
-
-    // Pod base (if not connected) - replicates JS canvas path exactly
-    if (!gGame.ship.podConnected) {
-        Color bc = ParseHex(gGame.level.podBaseColor);
-        float r = p->radius;  // = 9, so r+3=12, r+8=17
-        float a130 = DTR(130), a230 = DTR(230), a196 = DTR(196), a164 = DTR(164);
-        float r3 = r + 3.0f, r8 = r + 8.0f;
-
-        // Arc1: clockwise from DTR(130) to DTR(230), radius 12
-        DrawArcLines(px, py, r3, a130, a230, bc);
-        // Implicit line: arc1 end (r3 at a230) → arc2 start (r8 at a230)
-        DrawLine((int)(px + r3*cosf(a230)), (int)(py + r3*sinf(a230)),
-                 (int)(px + r8*cosf(a230)), (int)(py + r8*sinf(a230)), bc);
-        // Arc2: anticlockwise from DTR(230) to DTR(196), radius 17
-        DrawArcLines(px, py, r8, a230, a196, bc);
-        // Implicit line: arc2 end (r8 at a196) → (-5,27)
-        DrawLine((int)(px + r8*cosf(a196)), (int)(py + r8*sinf(a196)),
-                 (int)(px-5), (int)(py+27), bc);
-        // Foot plate
-        DrawLine((int)(px-5),(int)(py+27),(int)(px-8),(int)(py+27), bc);
-        DrawLine((int)(px-8),(int)(py+27),(int)(px-8),(int)(py+31), bc);
-        DrawLine((int)(px-8),(int)(py+31),(int)(px+8),(int)(py+31), bc);
-        DrawLine((int)(px+8),(int)(py+31),(int)(px+8),(int)(py+27), bc);
-        DrawLine((int)(px+8),(int)(py+27),(int)(px+5),(int)(py+27), bc);
-        // Implicit line: (5,27) → arc3 start (r8 at a164)
-        DrawLine((int)(px+5),(int)(py+27),
-                 (int)(px + r8*cosf(a164)), (int)(py + r8*sinf(a164)), bc);
-        // Arc3: anticlockwise from DTR(164) to DTR(130), radius 17
-        DrawArcLines(px, py, r8, a164, a130, bc);
-        // Line: arc3 end (r8 at a130) → (9,9)
-        DrawLine((int)(px + r8*cosf(a130)), (int)(py + r8*sinf(a130)),
-                 (int)(px+9), (int)(py+9), bc);
-    }
+    Color bc = ParseHex(gGame.level.podBaseColor);
+    DrawPodMesh(px, py, !gGame.ship.podConnected, pc, bc);
 }
 
 // ===================== ENEMY DRAWING =====================
@@ -571,25 +495,10 @@ static void InitEnemy(Enemy *e, EnemyDef *d) {
 
 static void DrawEnemy(Enemy *e) {
     Color ec = ParseHex(gGame.level.enemyColor);
-
-    if (newRender) {
-        // Recover world-space centre from dome: dome = (cx + 19*cos(ori), cy + 19*sin(ori))
-        float cx = e->dome.x - 19.0f * cosf(e->ori);
-        float cy = e->dome.y - 19.0f * sinf(e->ori);
-        DrawEnemyMesh(SXf(cx), SYf(cy), e->ori, ec);
-        return;
-    }
-
-    // Body outline
-    for (int i = 0; i < 6; i++) {
-        int j = (i+1) % 6;
-        DrawLine(SX(e->body[i].x), SY(e->body[i].y),
-                 SX(e->body[j].x), SY(e->body[j].y), ec);
-    }
-    // Dome arc
-    float domeRad = 3.7f + e->ori, domeEnd = 2.58f + e->ori;
-    DrawArcLines(SXf(e->dome.x), SYf(e->dome.y), 26,
-                 domeEnd, domeRad, ec);
+    // Recover world-space centre from dome: dome = (cx + 19*cos(ori), cy + 19*sin(ori))
+    float cx = e->dome.x - 19.0f * cosf(e->ori);
+    float cy = e->dome.y - 19.0f * sinf(e->ori);
+    DrawEnemyMesh(SXf(cx), SYf(cy), e->ori, ec);
 }
 
 // ===================== FUEL TANK DRAWING =====================
@@ -607,122 +516,33 @@ static void InitTank(Tank *t, TankDef *d) {
 }
 
 static void DrawTank(Tank *t) {
-    float sx = SXf(t->x);
-    float sy = SYf(t->y);
-    Color tc = ParseHex(gGame.level.tankColor);
-    Color lc = ParseHex(gGame.level.tankLegs);
-    Color lbc = ParseHex(gGame.level.tankLabel);
-
-    if (newRender) {
-        DrawTankMesh(sx, sy, tc, lc, lbc);
-        return;
-    }
-
-    // Tank body: two arcs - anticlockwise in JS canvas convention
-    // arc(0,25, 40, DTR(24), DTR(336), true)  -> sweep from DTR(24) down to DTR(336)-2π
-    // arc(0,-30, 40, DTR(204), DTR(156), true) -> sweep from DTR(204) down to DTR(156)
-    DrawArcLines(sx, sy+25, 40, DTR(24),  DTR(336) - 2.0f*PI, tc);
-    DrawArcLines(sx, sy-30, 40, DTR(204), DTR(156), tc);
-    // Connecting lines: JS canvas implicitly lines from one arc end to the next arc start.
-    // Right: lower-arc start (DTR(24) from centre y+25) → upper-arc end (DTR(156) from centre y-30)
-    // Left:  lower-arc end  (DTR(336)-2π)              → upper-arc start (DTR(204))
-    {
-        float ex = 40.0f * cosf(DTR(24));           // ≈ +16.27
-        float by = 25.0f + 40.0f * sinf(DTR(24));   // ≈ -11.54  (lower arc endpoint y)
-        float ty = -30.0f + 40.0f * sinf(DTR(156)); // ≈  +6.54  (upper arc endpoint y)
-        DrawLine((int)(sx + ex), (int)(sy + ty), (int)(sx + ex), (int)(sy + by), tc);
-        DrawLine((int)(sx - ex), (int)(sy + ty), (int)(sx - ex), (int)(sy + by), tc);
-    }
-
-    // Legs
-    DrawLine((int)(sx-11),(int)(sy+20),(int)(sx-8),(int)(sy+9), lc);
-    DrawLine((int)(sx+11),(int)(sy+20),(int)(sx+8),(int)(sy+9), lc);
-
-    // "FUEL" label lines (matching JS pixel art coords)
-    // F
-    DrawLine((int)(sx-11),(int)(sy-7),(int)(sx-11),(int)(sy+2), lbc);
-    DrawLine((int)(sx-10),(int)(sy-7),(int)(sx- 7),(int)(sy-7), lbc);
-    DrawLine((int)(sx-10),(int)(sy-2),(int)(sx- 8),(int)(sy-2), lbc);
-    // U
-    DrawLine((int)(sx- 4),(int)(sy-7),(int)(sx- 4),(int)(sy+2), lbc);
-    DrawLine((int)(sx- 3),(int)(sy+2),(int)(sx- 1),(int)(sy+2), lbc);
-    DrawLine((int)(sx  ),(int)(sy-7),(int)(sx  ),(int)(sy+2), lbc);
-    // E
-    DrawLine((int)(sx+ 2),(int)(sy-7),(int)(sx+ 2),(int)(sy+2), lbc);
-    DrawLine((int)(sx+ 3),(int)(sy-7),(int)(sx+ 7),(int)(sy-7), lbc);
-    DrawLine((int)(sx+ 3),(int)(sy-2),(int)(sx+ 6),(int)(sy-2), lbc);
-    DrawLine((int)(sx+ 3),(int)(sy+2),(int)(sx+ 7),(int)(sy+2), lbc);
-    // L
-    DrawLine((int)(sx+ 9),(int)(sy-7),(int)(sx+ 9),(int)(sy+2), lbc);
-    DrawLine((int)(sx+10),(int)(sy+2),(int)(sx+13),(int)(sy+2), lbc);
+    DrawTankMesh(SXf(t->x), SYf(t->y),
+                 ParseHex(gGame.level.tankColor),
+                 ParseHex(gGame.level.tankLegs),
+                 ParseHex(gGame.level.tankLabel));
 }
 
 // ===================== REACTOR DRAWING =====================
 static void DrawReactor(void) {
-    if (newRender){
-        Reactor *r = &gGame.reactor;
-        if (r->active && !(r->damage >= r->maxDamage && ((int)gGame.age % 6 < 3))) {
-            float rsx = SXf(r->x), rsy = SYf(r->y);
-            if (r->damage > 0) r->damage -= 0.02f;
-            bool drawSmoke = (gGame.age > r->drawSmoke);
-            DrawReactorMesh(rsx, rsy,
-                            ParseHex(gGame.level.reactorColor),
-                            ParseHex(gGame.level.reactorChimney),
-                            ParseHex(gGame.level.reactorDoor),
-                            r->smokeY, drawSmoke,
-                            r->damage, r->maxDamage);
-            if (drawSmoke) {
-                for (int i = 0; i < 2; i++) {
-                    r->smokeY[i] -= (1 + r->damage / 100.0f / 6.0f);
-                    if (r->smokeY[i] < -36) r->smokeY[i] += 20;
-                }
-            }
-        }
-        return;
-    }
-
-
     Reactor *r = &gGame.reactor;
     if (!r->active) return;
     if (r->damage >= r->maxDamage && ((int)gGame.age % 6 < 3)) return;
 
-    float sx = SXf(gGame.reactor.x);
-    float sy = SYf(gGame.reactor.y);
-    Color rc = ParseHex(gGame.level.reactorColor);
-    Color cc = ParseHex(gGame.level.reactorChimney);
-    Color dc = ParseHex(gGame.level.reactorDoor);
-
-    // Self-repair
+    float rsx = SXf(r->x), rsy = SYf(r->y);
     if (r->damage > 0) r->damage -= 0.02f;
-
-    // Circle
-    DrawCircleLines((int)sx,(int)sy, r->radius, rc);
-
-    // Smoke
-    if (gGame.age > r->drawSmoke) {
+    bool drawSmoke = (gGame.age > r->drawSmoke);
+    DrawReactorMesh(rsx, rsy,
+                    ParseHex(gGame.level.reactorColor),
+                    ParseHex(gGame.level.reactorChimney),
+                    ParseHex(gGame.level.reactorDoor),
+                    r->smokeY, drawSmoke,
+                    r->damage, r->maxDamage);
+    if (drawSmoke) {
         for (int i = 0; i < 2; i++) {
-            DrawRectangle((int)(sx+13),(int)(sy+r->smokeY[i]),3,3,cc);
-            r->smokeY[i] -= (1 + r->damage/100.0f/6.0f);
+            r->smokeY[i] -= (1 + r->damage / 100.0f / 6.0f);
             if (r->smokeY[i] < -36) r->smokeY[i] += 20;
         }
     }
-
-    // Building: fill first (like JS fill() before stroke()), then outline on top
-    // Body rect: x [-20,+20], y [+12,+22]; Chimney rect: x [+12,+17], y [-20,+12]
-    DrawRectangle((int)(sx-20),(int)(sy+12), 41, 11, C_BLACK);
-    DrawRectangle((int)(sx+12),(int)(sy-20),  6, 33, C_BLACK);
-    // Outline (stroke)
-    DrawLine((int)(sx-20),(int)(sy+22),(int)(sx-20),(int)(sy+12),cc);
-    DrawLine((int)(sx-20),(int)(sy+12),(int)(sx+12),(int)(sy+12),cc);
-    DrawLine((int)(sx+12),(int)(sy+12),(int)(sx+12),(int)(sy-20),cc);
-    DrawLine((int)(sx+12),(int)(sy-20),(int)(sx+17),(int)(sy-20),cc);
-    DrawLine((int)(sx+17),(int)(sy-20),(int)(sx+17),(int)(sy+12),cc);
-    DrawLine((int)(sx+17),(int)(sy+12),(int)(sx+20),(int)(sy+12),cc);
-    DrawLine((int)(sx+20),(int)(sy+12),(int)(sx+20),(int)(sy+22),cc);
-    DrawLine((int)(sx-20),(int)(sy+22),(int)(sx+20),(int)(sy+22),cc);
-
-    // Door
-    DrawRectangle((int)(sx-17),(int)(sy+14),4,6,dc);
 }
 
 // ===================== DOOR DRAWING =====================
@@ -2145,9 +1965,6 @@ int main(void) {
         if (gTick > 3.0f) gTick = 3.0f;  // cap at 3 logical ticks (handles minimise/pause)
         gZoom = (float)(GetScreenHeight() - HUD_H) / VIEWPORT_H;
 
-        if (IsKeyPressed(KEY_R)){
-            newRender = !newRender;
-        }
         if (IsKeyPressed(KEY_F1)){
             ToggleFullscreen();
         }
