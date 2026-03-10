@@ -13,8 +13,16 @@ static Color HexColor(unsigned r, unsigned g, unsigned b) { return (Color){r, g,
 
 static Color ParseHex(const char *h) {
     if (!h || h[0] != '#') return C_WHITE;
-    unsigned r=0, g=0, b=0;
-    sscanf(h+1, "%02x%02x%02x", &r, &g, &b);
+    unsigned r = 0, g = 0, b = 0;
+    for (int i = 1; i <= 6 && h[i]; i++) {
+        char c = h[i];
+        unsigned v = (c>='0'&&c<='9') ? (unsigned)(c-'0') :
+                     (c>='a'&&c<='f') ? (unsigned)(c-'a'+10) :
+                     (c>='A'&&c<='F') ? (unsigned)(c-'A'+10) : 0u;
+        if      (i <= 2) r = (r << 4) | v;
+        else if (i <= 4) g = (g << 4) | v;
+        else             b = (b << 4) | v;
+    }
     return HexColor(r, g, b);
 }
 
@@ -85,7 +93,7 @@ void DrawMessage(const char *msg, float zoom) {
     int li = 0;
     while (*p) {
         if (*p == '#' && *(p+1)) {
-            char hex[8]; strncpy(hex, p, 7); hex[7] = 0;
+            char hex[8]; memcpy(hex, p, 7); hex[7] = 0;
             col = ParseHex(hex);
             p += 7; continue;
         }

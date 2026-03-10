@@ -1,6 +1,9 @@
 #include "Draw.h"
+#include "HUD.h"
+#include "Levels.h"
 #include "rlgl.h"
 #include <math.h>
+#include <stdbool.h>
 #include <string.h>
 
 // ---------------------------------------------------------------------------
@@ -20,8 +23,8 @@ static inline Vector2 TransformVert(const Vert2D *v,
 static inline void DrawTriCCW(Vector2 a, Vector2 b, Vector2 c, Color col)
 {
     float cross = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-    if (cross < 0) DrawTriangle(a, c, b, col);
-    else           DrawTriangle(a, b, c, col);
+    if (cross < 0) DrawTriangle(a, b, c, col);
+    else           DrawTriangle(a, c, b, col);
 }
 
 // ---------------------------------------------------------------------------
@@ -479,5 +482,97 @@ void DrawReactorMesh(float sx, float sy,
     if (drawSmoke) {
         for (int i = 0; i < 2; i++)
             DrawRectangle((int)(sx + 13), (int)(sy + smokeY[i]), 3, 3, chimneyCol);
+    }
+}
+
+// ===========================================================================
+// LANDSCAPE MESH  (ear-clipped once at level load, cached for fast drawing)
+// ===========================================================================
+
+#define MAX_LAND_TRIS (MAX_LS + 2)   // ear-clipping produces at most n-2 triangles
+
+static bool LandPointInTri(Vector2 a, Vector2 b, Vector2 c, Vector2 p) {
+    float d1 = (p.x-b.x)*(a.y-b.y) - (a.x-b.x)*(p.y-b.y);
+    float d2 = (p.x-c.x)*(b.y-c.y) - (b.x-c.x)*(p.y-c.y);
+    float d3 = (p.x-a.x)*(c.y-a.y) - (c.x-a.x)*(p.y-a.y);
+    bool has_neg = (d1<0)||(d2<0)||(d3<0);
+    bool has_pos = (d1>0)||(d2>0)||(d3>0);
+    return !(has_neg && has_pos);
+}
+
+static int LandTriangulate(Vector2 *pts, int n, int tris_out[][3]) {
+    if (n < 3) return 0;
+    float area = 0;
+    for (int i = 0; i < n; i++) {
+        int j = (i+1)%n;
+        area += (pts[j].x - pts[i].x) * (pts[j].y + pts[i].y);
+    }
+    int idx[MAX_LS + 4];
+    for (int i = 0; i < n; i++) idx[i] = i;
+    int rem = n, count = 0;
+    while (rem > 3) {
+        bool found = false;
+        for (int i = 0; i < rem; i++) {
+            int pi = (i-1+rem)%rem, ni = (i+1)%rem;
+            Vector2 a = pts[idx[pi]], b = pts[idx[i]], c = pts[idx[ni]];
+            float cross = (b.x-a.x)*(c.y-a.y) - (b.y-a.y)*(c.x-a.x);
+            if (fabsf(cross) < 0.01f) continue;
+            if (area * cross >= 0.0f) continue;
+            bool is_ear = true;
+            for (int j = 0; j < rem && is_ear; j++) {
+                if (j==pi || j==i || j==ni) continue;
+                if (LandPointInTri(a, b, c, pts[idx[j]])) is_ear = false;
+            }
+            if (is_ear) {
+                tris_out[count][0] = idx[pi];
+                tris_out[count][1] = idx[i];
+                tris_out[count][2] = idx[ni];
+                count++;
+                for (int j = i; j < rem-1; j++) idx[j] = idx[j+1];
+                rem--;
+                found = true;
+                break;
+            }
+        }
+        if (!found) break;
+    }
+    if (rem == 3) {
+        tris_out[count][0] = idx[0];
+        tris_out[count][1] = idx[1];
+        tris_out[count][2] = idx[2];
+        count++;
+    }
+    return count;
+}
+
+static Vector2 sLandPoly[MAX_LS + 4];
+static int     sLandPolyN;
+static int     sLandTris[MAX_LAND_TRIS][3];
+static int     sLandTriCount;
+static Color   sLandCol;
+
+void CreateLandscapeMesh(const Vert2D *pts, int count, float arenaH, Color col) {
+    sLandCol   = col;
+    sLandPolyN = 0;
+    sLandPoly[sLandPolyN++] = (Vector2){ pts[0].x, arenaH };
+    for (int i = 0; i < count; i++)
+        sLandPoly[sLandPolyN++] = (Vector2){ pts[i].x, pts[i].y };
+    sLandPoly[sLandPolyN++] = (Vector2){ pts[count-1].x, arenaH };
+    sLandTriCount = LandTriangulate(sLandPoly, sLandPolyN, sLandTris);
+}
+
+void DrawLandscapeMesh(float vpOfsX, float vpOfsY, int arenaW, bool invisible) {
+    Color col = invisible ? (Color){ 0, 0, 0, 255 } : sLandCol;
+    for (int rep = -1; rep <= 1; rep++) {
+        float offX = (float)(rep * arenaW);
+        for (int t = 0; t < sLandTriCount; t++) {
+            Vector2 wa = sLandPoly[sLandTris[t][0]];
+            Vector2 wb = sLandPoly[sLandTris[t][1]];
+            Vector2 wc = sLandPoly[sLandTris[t][2]];
+            float ax = wa.x + offX - vpOfsX, ay = wa.y - vpOfsY + HUD_H;
+            float bx = wb.x + offX - vpOfsX, by = wb.y - vpOfsY + HUD_H;
+            float cx = wc.x + offX - vpOfsX, cy = wc.y - vpOfsY + HUD_H;
+            DrawTriCCW((Vector2){ ax, ay }, (Vector2){ bx, by }, (Vector2){ cx, cy }, col);
+        }
     }
 }

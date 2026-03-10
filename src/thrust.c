@@ -55,10 +55,18 @@ static Color HexColor(unsigned r, unsigned g, unsigned b) {
 
 
 static Color ParseHex(const char *h) {
-    if (!h || h[0]!='#') return C_WHITE;
-    unsigned r=0,g=0,b=0;
-    sscanf(h+1,"%02x%02x%02x",&r,&g,&b);
-    return HexColor(r,g,b);
+    if (!h || h[0] != '#') return C_WHITE;
+    unsigned r = 0, g = 0, b = 0;
+    for (int i = 1; i <= 6 && h[i]; i++) {
+        char c = h[i];
+        unsigned v = (c>='0'&&c<='9') ? (unsigned)(c-'0') :
+                     (c>='a'&&c<='f') ? (unsigned)(c-'a'+10) :
+                     (c>='A'&&c<='F') ? (unsigned)(c-'A'+10) : 0u;
+        if      (i <= 2) r = (r << 4) | v;
+        else if (i <= 4) g = (g << 4) | v;
+        else             b = (b << 4) | v;
+    }
+    return HexColor(r, g, b);
 }
 
 // ===================== MATH UTILITIES =====================
@@ -132,6 +140,7 @@ static bool PointInTri(V2 a, V2 b, V2 c, V2 p) {
     bool has_pos = (d1>0)||(d2>0)||(d3>0);
     return !(has_neg && has_pos);
 }
+
 
 // Ear-clipping triangulation for a simple polygon.
 // Handles concave (non-convex) shapes correctly.
@@ -363,35 +372,6 @@ static void DrawPolyOutline(V2 *pts, int n, Color col) {
         int j = (i+1) % n;
         DrawLine((int)pts[i].x, (int)pts[i].y,
                  (int)pts[j].x, (int)pts[j].y, col);
-    }
-}
-
-// ===================== LANDSCAPE DRAWING =====================
-static void DrawLandscape(bool invisible) {
-    LevelDef *lv = &gGame.level;
-    Color col = invisible ? C_BLACK : ParseHex(lv->landscapeColor);
-    // Use arena bottom in screen coords — matches JS fill-to-arenaH.
-    // Avoids clamping terrain points to the screen edge, which causes self-intersecting
-    // polygons when cave walls go leftward at the clamp boundary (level 2+).
-    float polyBottom = SYf(lv->arenaH);
-
-    for (int rep = -1; rep <= 1; rep++) {
-        float offX = rep * lv->arenaW;
-        V2 poly[MAX_LS + 4];
-        int n = 0;
-
-        // Bottom-left corner
-        poly[n++] = (V2){SXf(lv->landscape[0].x + offX), polyBottom};
-
-        // Terrain profile — no clamping: terrain Y <= arenaH always, so no self-intersection
-        for (int i = 0; i < lv->lsCount; i++) {
-            poly[n++] = (V2){SXf(lv->landscape[i].x + offX), SYf(lv->landscape[i].y)};
-        }
-
-        // Bottom-right corner
-        poly[n++] = (V2){SXf(lv->landscape[lv->lsCount-1].x + offX), polyBottom};
-
-        FillPolygon(poly, n, col);
     }
 }
 
@@ -1282,7 +1262,8 @@ static void ReDraw(void) {
     }
 
     // Landscape
-    DrawLandscape(invis);
+    DrawLandscapeMesh(gGame.arena.vpOfsX, gGame.arena.vpOfsY,
+                      gGame.level.arenaW, invis);
 
     // Paused overlay — drawn inside BeginZoom so it scales and centres with the game view
     if (paused) {
@@ -1317,6 +1298,9 @@ static void LoadLevel(int lvl) {
     gGame.curLevel = lvl;
     gGame.level = gLevels[lvl-1];
     if (reverseGravity) gGame.level.gravity = -gGame.level.gravity;
+    LevelDef *lv = &gGame.level;
+    CreateLandscapeMesh((const Vert2D*)lv->landscape, lv->lsCount,
+                        (float)lv->arenaH, ParseHex(lv->landscapeColor));
 }
 
 static void SetNewPosition(bool hasPod, float shipX, float shipY) {
@@ -1577,8 +1561,7 @@ static void DoHighScoreEdit(void) {
     }
     if (IsKeyPressed(KEY_ENTER)) {
         if (gHSNewIdx >= 0) {
-            strncpy(gHighScores[gHSNewIdx].name, gHSNewName, 15);
-            gHighScores[gHSNewIdx].name[15] = '\0';
+            snprintf(gHighScores[gHSNewIdx].name, sizeof(gHighScores[gHSNewIdx].name), "%s", gHSNewName);
         }
         gHSNewIdx = -1;
         gState = GS_HIGHSCORE;
@@ -1637,7 +1620,8 @@ static void Thrust(void) {
         for (int i = 0; i < gGame.tankCount; i++) if(gGame.tanks[i].fuelLoad>0) DrawTank(&gGame.tanks[i]);
         for (int i = 0; i < gGame.doorCount; i++) DrawDoor(&gGame.doors[i], false);
         DrawReactor();
-        DrawLandscape(gGame.invisTerrain);
+        DrawLandscapeMesh(gGame.arena.vpOfsX, gGame.arena.vpOfsY,
+                          gGame.level.arenaW, gGame.invisTerrain);
         DrawPod();
         for (int i = gGame.bhCount-1; i >= 0; i--) {
             if (DrawBlackHole(&gGame.blackHoles[i])) {
@@ -1694,7 +1678,7 @@ static void Thrust(void) {
         }
         if (gBonusScore > 0) {
             char tmp[64]; snprintf(tmp,sizeof(tmp),"%s\n\n%sbonus %d\n\n",gMsgBuf,b,gBonusScore);
-            strcpy(gMsgBuf, tmp);
+            snprintf(gMsgBuf, sizeof(gMsgBuf), "%s", tmp);
             gGame.score += gBonusScore;
             gBonusScore = 0;
         }

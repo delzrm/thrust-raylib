@@ -87,3 +87,18 @@ void DrawReactorMesh(float sx, float sy,
                      Color bodyCol, Color chimneyCol, Color doorCol,
                      float smokeY[2], bool drawSmoke,
                      float damage, float maxDamage);
+
+// ---------------------------------------------------------------------------
+// Landscape mesh (ear-clipped once at level load, drawn each frame)
+// ---------------------------------------------------------------------------
+
+// Build (or rebuild) the landscape triangle cache from the terrain profile.
+// pts: array of landscape points (x,y pairs); count: number of points.
+// arenaH: world-space bottom Y used to close the polygon.
+// col: fill colour for the terrain.
+void CreateLandscapeMesh(const Vert2D *pts, int count, float arenaH, Color col);
+
+// Draw the cached landscape triangles, applying the viewport transform.
+// arenaW: world width used for the seamless left/right repetitions.
+// invisible: if true, draw in black (used for the invisible-terrain effect).
+void DrawLandscapeMesh(float vpOfsX, float vpOfsY, int arenaW, bool invisible);
