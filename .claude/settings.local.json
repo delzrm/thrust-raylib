@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"^d|\\\\.c$|\\\\.h$|\\\\.txt$|\\\\.md$\")",
+      "Bash(wc -l /d/ThrustC/src/*.c /d/ThrustC/src/*.h)",
+      "Bash(python -c \":*)",
+      "Bash(powershell -Command \":*)",
+      "Bash(powershell -Command \"$lines = Get-Content ''d:\\\\ThrustC\\\\src\\\\thrust.c''; $keep = $lines[0..212] + $lines[450..\\($lines.Length-1\\)]; Set-Content ''d:\\\\ThrustC\\\\src\\\\thrust.c'' $keep; Write-Host \\(''Done. File now has '' + $keep.Length + '' lines''\\)\")",
+      "Bash(powershell -File:*)",
+      "Bash(cmake --build build --config Debug)"
+    ]
+  }
+}
