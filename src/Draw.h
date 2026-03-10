@@ -1,5 +1,6 @@
 #pragma once
 #include "raylib.h"
+#include "Levels.h"
 #include <stdbool.h>
 
 // ---------------------------------------------------------------------------
@@ -102,3 +103,14 @@ void CreateLandscapeMesh(const Vert2D *pts, int count, float arenaH, Color col);
 // arenaW: world width used for the seamless left/right repetitions.
 // invisible: if true, draw in black (used for the invisible-terrain effect).
 void DrawLandscapeMesh(float vpOfsX, float vpOfsY, int arenaW, bool invisible);
+
+// ---------------------------------------------------------------------------
+// Door
+// ---------------------------------------------------------------------------
+
+// Draw a door polygon (triangle-fan fill) and its keyholes.
+// state: current animation state index into def->verts/vertCount.
+// doorCol/keyCol: pre-resolved fill and keyhole outline colours.
+void DrawDoorMesh(const DoorDef *def, int state,
+                  float vpOfsX, float vpOfsY,
+                  Color doorCol, Color keyCol);

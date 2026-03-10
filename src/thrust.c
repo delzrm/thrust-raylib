@@ -50,10 +50,6 @@ static Color HexColor(unsigned r, unsigned g, unsigned b) {
 #define C_BLACK   CLITERAL(Color){0,0,0,255}
 #define C_GRAY    HexColor(136,136,136)
 
-#define COL_YELLOW   CLITERAL(Color){255,255,0,255}
-#define COL_TEST   CLITERAL(Color){80,80,80,255}
-
-
 static Color ParseHex(const char *h) {
     if (!h || h[0] != '#') return C_WHITE;
     unsigned r = 0, g = 0, b = 0;
@@ -108,82 +104,7 @@ static void DrawArcLines(float cx, float cy, float radius,
     }
 }
 
-// Draw filled triangle fan (polygon fill)
-static void FillPoly(V2 *pts, int n, Color col) {
-    if (n < 3) return;
-    for (int i = 1; i < n-1; i++) {
-        // raylib DrawTriangle expects CCW in screen coords
-        Vector2 a = {pts[0].x, pts[0].y};
-        Vector2 b = {pts[i].x, pts[i].y};
-        Vector2 c = {pts[i+1].x, pts[i+1].y};
-        // Check winding and swap if needed
-        float cross = (b.x-a.x)*(c.y-a.y) - (b.y-a.y)*(c.x-a.x);
-        if (cross > 0) { Vector2 tmp=b; b=c; c=tmp; } // swap CW→CCW (raylib needs CCW)
-        DrawTriangle(a, b, c, col);
-    }
-}
 
-// Draw triangle with automatic CCW winding correction (raylib requires CCW)
-static void DrawTriCCW(V2 a, V2 b, V2 c, Color col) {
-    float cross = (b.x-a.x)*(c.y-a.y) - (b.y-a.y)*(c.x-a.x);
-    Vector2 va={a.x,a.y}, vb={b.x,b.y}, vc={c.x,c.y};
-    if (cross < 0) DrawTriangle(va,vb,vc,col);
-    else           DrawTriangle(va,vc,vb,col);
-}
-
-// Test if point p is strictly inside triangle abc
-static bool PointInTri(V2 a, V2 b, V2 c, V2 p) {
-    float d1 = (p.x-b.x)*(a.y-b.y) - (a.x-b.x)*(p.y-b.y);
-    float d2 = (p.x-c.x)*(b.y-c.y) - (b.x-c.x)*(p.y-c.y);
-    float d3 = (p.x-a.x)*(c.y-a.y) - (c.x-a.x)*(p.y-a.y);
-    bool has_neg = (d1<0)||(d2<0)||(d3<0);
-    bool has_pos = (d1>0)||(d2>0)||(d3>0);
-    return !(has_neg && has_pos);
-}
-
-
-// Ear-clipping triangulation for a simple polygon.
-// Handles concave (non-convex) shapes correctly.
-static void FillPolygon(V2 *pts, int n, Color col) {
-    if (n < 3) return;
-    // Compute signed area via trapezoid formula; < 0 means CW in screen (Y-down)
-    float area = 0;
-    for (int i = 0; i < n; i++) {
-        int j = (i+1)%n;
-        area += (pts[j].x - pts[i].x) * (pts[j].y + pts[i].y);
-    }
-    int idx[MAX_LS + 4];
-    for (int i = 0; i < n; i++) idx[i] = i;
-    int rem = n;
-    while (rem > 3) {
-        bool found = false;
-        for (int i = 0; i < rem; i++) {
-            int pi = (i-1+rem)%rem, ni = (i+1)%rem;
-            V2 a = pts[idx[pi]], b = pts[idx[i]], c = pts[idx[ni]];
-            float cross = (b.x-a.x)*(c.y-a.y) - (b.y-a.y)*(c.x-a.x);
-            // Ear must be convex for this polygon's winding:
-            // CW polygon (area<0) → ear has cross>0; CCW (area>0) → ear has cross<0
-            // Equivalently: area * cross < 0
-            if (fabsf(cross) < 0.01f) continue; // collinear, skip
-            if (area * cross >= 0.0f) continue;  // reflex vertex, not an ear
-            // Check no other vertex is inside this triangle
-            bool is_ear = true;
-            for (int j = 0; j < rem && is_ear; j++) {
-                if (j==pi || j==i || j==ni) continue;
-                if (PointInTri(a, b, c, pts[idx[j]])) is_ear = false;
-            }
-            if (is_ear) {
-                DrawTriCCW(a, b, c, col);
-                for (int j = i; j < rem-1; j++) idx[j] = idx[j+1];
-                rem--;
-                found = true;
-                break;
-            }
-        }
-        if (!found) break;
-    }
-    if (rem == 3) DrawTriCCW(pts[idx[0]], pts[idx[1]], pts[idx[2]], col);
-}
 
 // ===================== LEVEL DATA =====================
 // Types and data are in Levels.h / Levels.c
@@ -281,6 +202,7 @@ typedef enum {
     GS_MISSION_FAILED, GS_MISSION_FAILED_MSG,
     GS_MISSION_INCOMPLETE, GS_MISSION_INCOMPLETE_MSG,
     GS_CHECK_LEVEL, GS_DO_NOTHING, GS_HIGHSCORE_EDIT,
+    GS_RESPAWN,
 } GameState;
 
 typedef struct {
@@ -324,6 +246,7 @@ static int gBonusScore = 0;
 static float gPlanetExpPos = 0.0f;
 static float gTick = 1.0f;  // dt * BASE_FPS, set each frame
 static float gZoom = 1.0f;  // global zoom scale (1.0 = normal)
+static char gMsgBuf[2048];  // current message text (redrawn each frame in GS_DO_NOTHING)
 
 static Color gPlanetExpColors[] = {
     {255,255,0,255},{255,0,0,255},{0,255,0,255},{0,0,255,255},{255,0,255,255},
@@ -339,8 +262,6 @@ static int KEY_SHIELD = KEY_SPACE;
 static int BIND_PAUSE  = KEY_P;
 static int KEY_QUIT   = KEY_ESCAPE;
 
-static int gKeySelectPos = 0;
-static int gKeySelectTimer = 0;
 
 // ===================== DRAWING HELPERS =====================
 // Convert world coords to screen coords
@@ -367,13 +288,6 @@ static void EndZoom(void) {
     rlPopMatrix();
 }
 
-static void DrawPolyOutline(V2 *pts, int n, Color col) {
-    for (int i = 0; i < n; i++) {
-        int j = (i+1) % n;
-        DrawLine((int)pts[i].x, (int)pts[i].y,
-                 (int)pts[j].x, (int)pts[j].y, col);
-    }
-}
 
 // ===================== STAR DRAWING =====================
 static void InitStars(void) {
@@ -531,25 +445,7 @@ static void DrawDoor(Door *d, bool invisible) {
     const DoorDef *def = d->def;
     Color dc = invisible ? C_BLACK : ParseHex(def->doorColor);
     Color kc = ParseHex(def->keyColor);
-
-    // Draw door polygon (current state)
-    int s = d->state;
-    int vc = def->vertCount[s];
-    if (vc >= 3) {
-        V2 pts[MAX_DVERTS];
-        for (int i = 0; i < vc; i++) {
-            pts[i].x = SXf(def->x + def->verts[s][i][0]);
-            pts[i].y = SYf(def->y + def->verts[s][i][1]);
-        }
-        FillPoly(pts, vc, dc);
-    }
-
-    // Keyholes
-    for (int k = 0; k < def->keyholeCount; k++) {
-        float kx = SXf(def->keyholes[k][0]);
-        float ky = SYf(def->keyholes[k][1]);
-        DrawCircleLines((int)kx,(int)ky, 13, kc);
-    }
+    DrawDoorMesh(def, d->state, gGame.arena.vpOfsX, gGame.arena.vpOfsY, dc, kc);
 }
 
 // ===================== EXPLOSION DRAWING =====================
@@ -820,7 +716,7 @@ static void ShipDie(float sx, float sy, bool jumpLevel) {
     if (gGame.fuel < 1) gGame.lives = -1;
 
     if (gGame.lives > -1) {
-        SetPause(jumpLevel ? GS_MISSION_FAILED : GS_START_LIFE, 3000);
+        SetPause(jumpLevel ? GS_MISSION_FAILED : GS_RESPAWN, 3000);
     } else {
         SetPause(GS_GAME_OVER, 2800);
     }
@@ -1278,8 +1174,6 @@ static void ReDraw(void) {
     EndZoom();
 }
 
-static char gMsgBuf[2048];  // last displayed message (redrawn each frame in GS_DO_NOTHING)
-
 // ===================== LEVEL LOAD / GAME INIT =====================
 static void LoadLevel(int lvl) {
     bool reverseGravity = false;
@@ -1317,7 +1211,7 @@ static void SetNewPosition(bool hasPod, float shipX, float shipY) {
     }
 }
 
-static void StartNewLife(void) {
+static void StartNewLife(bool respawn) {
     LevelDef *lv = &gGame.level;
     Arena *ar = &gGame.arena;
     ar->vpOfsX = lv->shipX - VIEWPORT_W / 2.0f;
@@ -1347,16 +1241,17 @@ static void StartNewLife(void) {
     pod->vx = 0; pod->vy = 0;
     pod->radius = 9; pod->active = true;
 
-    // Fuel tanks
-    gGame.tankCount = 0;
-    for (int i = 0; i < lv->tankCount; i++)
-        InitTank(&gGame.tanks[gGame.tankCount++], &lv->tanks[i]);
+    if (!respawn){
+        // Fuel tanks
+        gGame.tankCount = 0;
+        for (int i = 0; i < lv->tankCount; i++)
+            InitTank(&gGame.tanks[gGame.tankCount++], &lv->tanks[i]);
 
-    // Enemies
-    gGame.enemyCount = 0;
-    for (int i = 0; i < lv->enemyCount; i++)
-        InitEnemy(&gGame.enemies[gGame.enemyCount++], &lv->enemies[i]);
-
+        // Enemies
+        gGame.enemyCount = 0;
+        for (int i = 0; i < lv->enemyCount; i++)
+            InitEnemy(&gGame.enemies[gGame.enemyCount++], &lv->enemies[i]);
+    }
     // Doors
     gGame.doorCount = 0;
     for (int i = 0; i < lv->doorCount; i++) {
@@ -1449,10 +1344,6 @@ static void HandleInput(void) {
 }
 
 // ===================== MAIN GAME STATE MACHINE =====================
-
-static void ShowMessage(const char *msg) {
-    DrawMessage(msg, gZoom);
-}
 
 static void DoKeySelect(void) {
     // JS advances scroll every 110ms = 2.2 logical ticks (50ms/tick).
@@ -1645,7 +1536,10 @@ static void Thrust(void) {
         break;
 
     case GS_START_LIFE:
-        StartNewLife();
+        StartNewLife(false);
+        break;
+    case GS_RESPAWN:
+        StartNewLife(true);
         break;
 
     case GS_GAME_OVER:
@@ -1751,7 +1645,7 @@ static void Thrust(void) {
     case GS_DO_NOTHING:
         // raylib clears each frame; redraw the last message so it stays visible
         DrawHUD(gGame.curLevel, gGame.fuel, gGame.lives, gGame.score, gGame.reactor.countdownStarted, gGame.reactor.countdown, gHudTexture);
-        if (gMsgBuf[0]) ShowMessage(gMsgBuf);
+        if (gMsgBuf[0]) DrawMessage(gMsgBuf, gZoom);
         // Only allow space-to-restart when there is no pending auto-transition (gPauseActive).
         // Every mission-complete/failed/incomplete path through DO_NOTHING has an active timer,
         // so this prevents accidentally restarting from level 1 while the transition plays out.

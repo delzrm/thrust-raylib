@@ -1,0 +1,6 @@
+# Build artifacts and dependency sources — never relevant to editing game code
+build/
+Debug/
+
+# IDE config
+.vscode/

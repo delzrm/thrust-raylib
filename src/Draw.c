@@ -576,3 +576,36 @@ void DrawLandscapeMesh(float vpOfsX, float vpOfsY, int arenaW, bool invisible) {
         }
     }
 }
+
+// ===========================================================================
+// DOOR MESH  (triangle-fan fill for convex door polygons + keyhole circles)
+// ===========================================================================
+
+void DrawDoorMesh(const DoorDef *def, int state,
+                  float vpOfsX, float vpOfsY,
+                  Color doorCol, Color keyCol)
+{
+    int vc = def->vertCount[state];
+    if (vc >= 3) {
+        // Build screen-space polygon
+        Vector2 pts[MAX_DVERTS];
+        for (int i = 0; i < vc; i++) {
+            pts[i].x = def->x + def->verts[state][i][0] - vpOfsX;
+            pts[i].y = def->y + def->verts[state][i][1] - vpOfsY + HUD_H;
+        }
+        // Triangle fan from pts[0] — works for convex polygons
+        for (int i = 1; i < vc - 1; i++) {
+            Vector2 a = pts[0], b = pts[i], c = pts[i+1];
+            float cross = (b.x-a.x)*(c.y-a.y) - (b.y-a.y)*(c.x-a.x);
+            if (cross > 0) DrawTriangle(a, c, b, doorCol);
+            else           DrawTriangle(a, b, c, doorCol);
+        }
+    }
+
+    // Keyholes
+    for (int k = 0; k < def->keyholeCount; k++) {
+        int kx = (int)(def->keyholes[k][0] - vpOfsX);
+        int ky = (int)(def->keyholes[k][1] - vpOfsY + HUD_H);
+        DrawCircleLines(kx, ky, 13, keyCol);
+    }
+}
