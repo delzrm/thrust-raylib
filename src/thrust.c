@@ -595,10 +595,15 @@ static void ShipCalcPosition(void) {
     // Check upper limit (exit) - JS: ship.y <= iUpperLimit (= viewport height = 470)
     Arena *ar = &g->arena;
 
+    // dirty cheats...
+    if (IsKeyPressed(KEY_L)){
+        g->lives++;
+    }
     bool skipLevel = false;
     if (IsKeyPressed(KEY_EQUAL)){
         skipLevel = true;
     }
+
 
     if ((s->y <= (float)VIEWPORT_H || skipLevel) && s->active) {
         g->pod.active = false;
