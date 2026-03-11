@@ -82,6 +82,32 @@ static const Mesh2D sShipMesh = { kShipVerts, 9, kShipLines, 9, NULL, 0 };
 
 const Mesh2D *GetShipMesh(void) { return &sShipMesh; }
 
+static const Vert2D kShipThruster1Verts[3] = {
+    {  -12.0f,    0.0f },   // 0  thrustertip
+    {  -8.0f,    2.0f },   // 4  rear-right inner
+    {  -8.0f,   -2.0f }   // 5  rear-left inner
+};
+static const Vert2D kShipThruster2Verts[3] = {
+    {  -11.0f,    0.0f },   // 0  thrustertip
+    {  -8.0f,    2.0f },   // 4  rear-right inner
+    {  -8.0f,   -2.0f }   // 5  rear-left inner
+};
+
+static const Line2D kShipThrusterLines[2] = {
+    {0,1},{0,2}
+};
+static const Mesh2D sShipThruster1Mesh = { kShipThruster1Verts, 3, kShipThrusterLines, 2, NULL, 0 };
+static const Mesh2D sShipThruster2Mesh = { kShipThruster2Verts, 3, kShipThrusterLines, 2, NULL, 0 };
+
+const Mesh2D *GetShipThrusterMesh(void) { 
+    if (GetRandomValue(0,10)>6){
+        return &sShipThruster1Mesh;
+    }
+    return &sShipThruster2Mesh;
+}
+
+
+
 // ===========================================================================
 // POD MESH  (circle body, radius 9, 20 segments)
 // Vertices pre-computed from: angle = k * 2*PI/20, r = 9
@@ -427,9 +453,13 @@ const Mesh2D *GetReactorCircleMesh(void) { return &sReactorCircleMesh; }
 // High-level draw helpers
 // ===========================================================================
 
-void DrawShipMesh(float sx, float sy, float oriRad, Color col)
+void DrawShipMesh(float sx, float sy, float oriRad, Color col, bool thrusting)
 {
     DrawMesh2D(&sShipMesh, (Vector2){ sx, sy }, oriRad, 1.0f, col);
+    if (thrusting){
+        col.g = 120+GetRandomValue(0,20);
+     DrawMesh2D(GetShipThrusterMesh(), (Vector2){ sx, sy }, oriRad, 1.0f, col);
+    }
 }
 
 void DrawPodMesh(float sx, float sy, bool withBase, Color bodyCol, Color baseCol)

@@ -238,6 +238,7 @@ static char gHSNewName[16] = {0};
 static Game gGame;
 static GameState gState = GS_KEY_SELECT;
 static Texture2D gHudTexture;   // bg.gif sprite sheet (5760×51, 6 frames of 960px)
+static Texture2D gPicTexture;   // 320x200 picture
 static int gPauseTimer = 0;     // frame at which deferred state fires
 static GameState gPauseTarget;
 static bool gPauseActive = false;
@@ -337,7 +338,7 @@ static void DrawShip(void) {
     float theta = DTR(s->ori);
     float cx = SXf(s->x), cy = SYf(s->y);
 
-    DrawShipMesh(cx, cy, theta, C_YELLOW);
+    DrawShipMesh(cx, cy, theta, C_YELLOW,s->thrust);
 
     // Shield arcs — not part of the mesh
     if (s->shield && ((int)gGame.age % 2 == 0)) {
@@ -1382,7 +1383,7 @@ static void DoKeySelect(void) {
         "#888888press escape to quit\n\n"
         //"#00ffff%.52s", scroll
         );
-    DrawMessage(gMsgBuf, gZoom);
+    DrawMessageTitle(gPicTexture, gMsgBuf, gZoom);
 
     // Advance scroll at JS rate: 1 step per 110ms = 2.2 logical ticks
     scrollAcc += gTick;
@@ -1674,6 +1675,7 @@ int main(void) {
     //InitWindow(VIEWPORT_W, SCREEN_H, "Thrust");
     SetTargetFPS(GAME_FPS);
     gHudTexture = LoadTexture("bg.gif");
+    gPicTexture = LoadTexture("tp.gif");
 
     // Initialize game state
     CreateGame();
@@ -1698,6 +1700,7 @@ int main(void) {
     }
 
     UnloadTexture(gHudTexture);
+    UnloadTexture(gPicTexture);
     CloseWindow();
     return 0;
 }

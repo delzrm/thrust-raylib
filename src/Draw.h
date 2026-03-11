@@ -73,7 +73,7 @@ const Mesh2D *GetReactorCircleMesh(void);
 // pos / ori are in world coordinates – call SXf/SYf before passing here.
 typedef struct { float x, y; } V2Scr;  // screen-space point
 
-void DrawShipMesh  (float sx, float sy, float oriRad, Color col);
+void DrawShipMesh  (float sx, float sy, float oriRad, Color col, bool thrusting);
 void DrawPodMesh   (float sx, float sy, bool withBase, Color bodyCol, Color baseCol);
 void DrawPodRodMesh(float x0, float y0, float x1, float y1, Color col);
 void DrawTankMesh  (float sx, float sy, Color bodyCol, Color legCol, Color labelCol);

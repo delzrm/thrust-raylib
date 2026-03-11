@@ -14,3 +14,6 @@ void DrawHUD(int curLevel, float fuel, int lives, int score,
 // Supports inline colour tags: #rrggbb changes the current draw colour.
 // zoom: the current display scale factor (gZoom).
 void DrawMessage(const char *msg, float zoom);
+void DrawMessageTitle(Texture2D picTexture, const char *msg, float zoom);
+
+
