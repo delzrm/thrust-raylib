@@ -925,7 +925,9 @@ static void ReDraw(void) {
                     gGame.level.landscape[i].x,gGame.level.landscape[i].y,
                     gGame.level.landscape[i+1].x,gGame.level.landscape[i+1].y,&ox,&oy))
                 {
+                    bool playerBullet = !b->enemyFire;
                     gGame.bullets[bi] = gGame.bullets[--gGame.bulletCount]; removed=true;
+                    if (playerBullet) AddExplosionColored(SXf(ox), SYf(oy), false, ParseHex(gGame.level.landscapeColor));
                 }
             }
             if (removed || bi >= gGame.bulletCount) continue;
@@ -1213,7 +1215,7 @@ static void SetNewPosition(bool hasPod, float shipX, float shipY) {
     if (hasPod) {
         s->podConnected = true;
         gGame.pod.x = shipX - 17;
-        gGame.pod.y = shipY + 77;
+        gGame.pod.y = shipY + (gGame.level.gravity >= 0 ? 77 : -77);
     }
 }
 
@@ -1315,6 +1317,10 @@ static void HandleInput(void) {
 
     if (IsKeyPressed(BIND_PAUSE)) {
         s->paused = !s->paused;
+    } else if (s->paused && (IsKeyPressed(KEY_Z) || IsKeyPressed(KEY_X) ||
+               IsKeyPressed(KEY_RIGHT_SHIFT) || IsKeyPressed(KEY_ENTER) ||
+               IsKeyPressed(KEY_SPACE))) {
+        s->paused = false;
     }
     if (IsKeyPressed(KEY_QUIT)) {
         gGame.lives = -1;
