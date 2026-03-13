@@ -11,6 +11,7 @@
 #include "BlackHoles.h"
 #include "Hiscore.h"
 #include "Input.h"
+#include "debug.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -919,6 +920,7 @@ static void UpdateAndDraw(void) {
         DrawText(ptxt, (int)(pcx - ptxtW/2), (int)(pcy - 8), 16, C_YELLOW);
     }
 
+    DrawDebugCollision();
     EndZoom();
 }
 
@@ -1134,6 +1136,7 @@ static void Thrust(void) {
                 RemoveBhAt(i);
             }
         }
+        DrawDebugCollision();
         EndZoom();
         gGame.age += gTick;
         break;
@@ -1289,6 +1292,9 @@ int main(void) {
 
         if (IsKeyPressed(KEY_F1)){
             ToggleFullscreen();
+        }
+        if (IsKeyPressed(KEY_F3)) {
+            gDebugCollision = !gDebugCollision;
         }
 
         //gZoom = 1.0f/(470.0f/VIEWPORT_H);

@@ -13,7 +13,7 @@ FetchContent_Declare(
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(raylib)
 
-add_executable(thrust src/thrust.c src/Draw.c src/Levels.c src/Collision.c src/VectorFont.c src/HUD.c src/Explosions.c src/BlackHoles.c src/Hiscore.c src/Input.c)
+add_executable(thrust src/thrust.c src/Draw.c src/Levels.c src/Collision.c src/VectorFont.c src/HUD.c src/Explosions.c src/BlackHoles.c src/Hiscore.c src/Input.c src/debug.c)
 target_link_libraries(thrust raylib)
 
 if(MSVC)
