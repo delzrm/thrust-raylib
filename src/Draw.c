@@ -219,26 +219,11 @@ static const Mesh2D sPodBaseMesh = { kPodBaseVerts, 26, kPodBaseLines, 25, NULL,
 const Mesh2D *GetPodBaseMesh(void) { return &sPodBaseMesh; }
 
 // ===========================================================================
-// TANK MESH  (body arcs + connecting sides only)
+// TANK MESH  (upper arc + connecting sides only)
 //
-// Angle convention (D2R = (deg-90)*PI/180):
-//   Lower arc: center (0,+25), r=40, D2R(24) -> D2R(336)-2PI, 16 segments
-//   Upper arc: center (0,-30), r=40, D2R(204) -> D2R(156),    16 segments
-//   Side lines connect the arc endpoints at x ≈ ±16.27
-//
-// Vertex layout (34 verts):
-//   v0-v16   lower arc  (17 verts)
-//   v17-v33  upper arc  (17 verts)
-//
-// Line layout (34 lines):
-//   [0-15]   lower arc segments
-//   [16-31]  upper arc segments
-//   [32]     right side: v33->v0
-//   [33]     left  side: v16->v17
-// ===========================================================================
 
-static const Vert2D kTankVerts[34] = {
-    // lower arc: center (0,+25), r=40, D2R(24)->D2R(336)-2PI, 16 segs
+static const Vert2D kTankVerts[19] = {
+    // upper arc: center (0,-30), r=40, D2R(204)->D2R(156), 16 segs
     {  16.2695f, -11.5418f },   //  0
     {  14.3347f, -12.3432f },   //  1
     {  12.3607f, -13.0423f },   //  2
@@ -256,57 +241,23 @@ static const Vert2D kTankVerts[34] = {
     { -12.3607f, -13.0423f },   // 14
     { -14.3347f, -12.3432f },   // 15
     { -16.2695f, -11.5418f },   // 16
-    // upper arc: center (0,-30), r=40, D2R(204)->D2R(156), 16 segs
-    { -16.2695f,   6.5418f },   // 17
-    { -14.3347f,   7.3432f },   // 18
-    { -12.3607f,   8.0423f },   // 19
-    { -10.3528f,   8.6370f },   // 20
-    {  -8.3165f,   9.1259f },   // 21
-    {  -6.2574f,   9.5075f },   // 22
-    {  -4.1811f,   9.7809f },   // 23
-    {  -2.0934f,   9.9452f },   // 24
-    {   0.0000f,  10.0000f },   // 25
-    {   2.0934f,   9.9452f },   // 26
-    {   4.1811f,   9.7809f },   // 27
-    {   6.2574f,   9.5075f },   // 28
-    {   8.3165f,   9.1259f },   // 29
-    {  10.3528f,   8.6370f },   // 30
-    {  12.3607f,   8.0423f },   // 31
-    {  14.3347f,   7.3432f },   // 32
-    {  16.2695f,   6.5418f },   // 33
+    // base points
+    {  16.2695f, 20.0f },       // 17
+    { -16.2695f, 20.0f }        // 18
+    
 };
-static const Line2D kTankLines[34] = {
-    // lower arc (16 segs)
+static const Line2D kTankLines[18] = {
+    // upper arc (16 segs)
     {0,1},{1,2},{2,3},{3,4},{4,5},{5,6},{6,7},{7,8},
     {8,9},{9,10},{10,11},{11,12},{12,13},{13,14},{14,15},{15,16},
-    // upper arc (16 segs)
-    {17,18},{18,19},{19,20},{20,21},{21,22},{22,23},{23,24},{24,25},
-    {25,26},{26,27},{27,28},{28,29},{29,30},{30,31},{31,32},{32,33},
     // side connectors
-    {33, 0},    // right side: upper-arc end -> lower-arc start
-    {16,17},    // left  side: lower-arc end -> upper-arc start
+    {0, 17},    // right side: upper-arc end -> base
+    {16,18}    // left  side: upper-arc start -> base
 };
-static const Mesh2D sTankMesh = { kTankVerts, 34, kTankLines, 34, NULL, 0 };
+
+static const Mesh2D sTankMesh = { kTankVerts, 19, kTankLines, 18, NULL, 0 };
 
 const Mesh2D *GetTankMesh(void) { return &sTankMesh; }
-
-// ===========================================================================
-// TANK LEG MESH  (two support legs, drawn in a separate colour)
-// ===========================================================================
-
-static const Vert2D kTankLegVerts[4] = {
-    { -11.0f,  20.0f },   // 0  left leg top
-    {  -8.0f,   9.0f },   // 1  left leg bottom
-    {  11.0f,  20.0f },   // 2  right leg top
-    {   8.0f,   9.0f },   // 3  right leg bottom
-};
-static const Line2D kTankLegLines[2] = {
-    {0,1},  // left leg
-    {2,3},  // right leg
-};
-static const Mesh2D sTankLegMesh = { kTankLegVerts, 4, kTankLegLines, 2, NULL, 0 };
-
-const Mesh2D *GetTankLegMesh(void) { return &sTankLegMesh; }
 
 // ===========================================================================
 // TANK LABEL MESH  ("FUEL" pixel-art letters)
@@ -315,21 +266,21 @@ const Mesh2D *GetTankLegMesh(void) { return &sTankLegMesh; }
 
 static const Vert2D kTankLabelVerts[24] = {
     // F
-    { -11.0f,  -7.0f }, { -11.0f,   2.0f },   //  0- 1  left stroke
-    { -10.0f,  -7.0f }, {  -7.0f,  -7.0f },   //  2- 3  top bar
-    { -10.0f,  -2.0f }, {  -8.0f,  -2.0f },   //  4- 5  mid bar
+    { -11.0f,  -3.0f }, { -11.0f,   6.0f },   //  0- 1  left stroke
+    { -10.0f,  -3.0f }, {  -7.0f,  -3.0f },   //  2- 3  top bar
+    { -10.0f,  2.0f }, {  -8.0f,  2.0f },   //  4- 5  mid bar
     // U
-    {  -4.0f,  -7.0f }, {  -4.0f,   2.0f },   //  6- 7  left stroke
-    {  -3.0f,   2.0f }, {  -1.0f,   2.0f },   //  8- 9  bottom bar
-    {   0.0f,  -7.0f }, {   0.0f,   2.0f },   // 10-11  right stroke
+    {  -4.0f,  -3.0f }, {  -4.0f,   6.0f },   //  6- 7  left stroke
+    {  -3.0f,   6.0f }, {  -1.0f,   6.0f },   //  8- 9  bottom bar
+    {   0.0f,  -3.0f }, {   0.0f,   6.0f },   // 10-11  right stroke
     // E
-    {   2.0f,  -7.0f }, {   2.0f,   2.0f },   // 12-13  left stroke
-    {   3.0f,  -7.0f }, {   7.0f,  -7.0f },   // 14-15  top bar
-    {   3.0f,  -2.0f }, {   6.0f,  -2.0f },   // 16-17  mid bar
-    {   3.0f,   2.0f }, {   7.0f,   2.0f },   // 18-19  bottom bar
+    {   2.0f,  -3.0f }, {   2.0f,   6.0f },   // 12-13  left stroke
+    {   3.0f,  -3.0f }, {   7.0f,  -3.0f },   // 14-15  top bar
+    {   3.0f,   1.5f }, {   6.0f,   1.5f },   // 16-17  mid bar
+    {   3.0f,   6.0f }, {   7.0f,   6.0f },   // 18-19  bottom bar
     // L
-    {   9.0f,  -7.0f }, {   9.0f,   2.0f },   // 20-21  left stroke
-    {  10.0f,   2.0f }, {  13.0f,   2.0f },   // 22-23  bottom bar
+    {   9.0f,  -3.0f }, {   9.0f,   6.0f },   // 20-21  left stroke
+    {  10.0f,   6.0f }, {  13.0f,   6.0f },   // 22-23  bottom bar
 };
 static const Line2D kTankLabelLines[12] = {
     {0,1},{2,3},{4,5},          // F
@@ -477,7 +428,6 @@ void DrawPodRodMesh(float x0, float y0, float x1, float y1, Color col)
 void DrawTankMesh(float sx, float sy, Color bodyCol, Color legCol, Color labelCol)
 {
     DrawMesh2D(&sTankMesh,      (Vector2){ sx, sy }, 0.0f, 1.0f, bodyCol);
-    DrawMesh2D(&sTankLegMesh,   (Vector2){ sx, sy }, 0.0f, 1.0f, legCol);
     DrawMesh2D(&sTankLabelMesh, (Vector2){ sx, sy }, 0.0f, 1.0f, labelCol);
 }
 
