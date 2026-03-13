@@ -151,7 +151,7 @@ typedef enum {
     GS_KEY_SELECT, GS_HIGHSCORE, GS_HIGHSCORE_SHOW, GS_START_GAME, GS_START_LIFE,
     GS_IN_FLIGHT, GS_BLACK_HOLE, GS_GAME_OVER,
     GS_MISSION_COMPLETE, GS_MISSION_COMPLETE_MSG,
-    GS_MISSION_FAILED, GS_MISSION_FAILED2, GS_MISSION_FAILED_MSG,
+    GS_MISSION_FAILED, GS_MISSION_FAILED_MSG,
     GS_MISSION_INCOMPLETE, GS_MISSION_INCOMPLETE_MSG,
     GS_CHECK_LEVEL, GS_DO_NOTHING, GS_HIGHSCORE_EDIT,
     GS_RESPAWN,
@@ -591,7 +591,7 @@ static void ShipDie(float sx, float sy, bool jumpLevel) {
     if (gGame.fuel < 1) gGame.lives = -1;
 
     if (gGame.lives > -1) {
-        SetPause(jumpLevel ? GS_MISSION_FAILED2 : GS_RESPAWN, 3000);
+        SetPause(jumpLevel ? GS_MISSION_FAILED : GS_RESPAWN, 3000);
     } else {
         SetPause(GS_GAME_OVER, 2800);
     }
@@ -1469,14 +1469,6 @@ static void Thrust(void) {
         LoadLevel(gGame.visLevel);
         SetPause(GS_MISSION_FAILED_MSG, 1200);
         break;
-
-    case GS_MISSION_FAILED2:
-        gState = GS_DO_NOTHING;
-        gMsgBuf[0] = '\0';
-        LoadLevel(gGame.visLevel);
-        SetPause(GS_START_LIFE, 3000);
-        break;
-
 
     case GS_MISSION_FAILED_MSG: {
         gState = GS_DO_NOTHING;
