@@ -1,24 +1,20 @@
 #include "Levels.h"
+#include "Colours.h"
 #include <stdbool.h>
 
 LevelDef gLevels[NUM_LEVELS] = {
 // ======= LEVEL 1 =======
 {
     .arenaW=2000,.arenaH=2500,.vpOfsX=333,.vpOfsY=1200,.gravity=0.10f,
-    .landscapeColor="#880000",
     .landscape={{0,1500},{514,1500},{674,1575},{874,1575},{1004,1635},
                 {1255,1635},{1255,1545},{1395,1545},{1495,1500},{2000,1500}},
     .lsCount=10,
-    .starCount=50,.starLowerLimit=1300,.starColorA="#ffff00",.starColorB="#00ff00",
-    .reactorX=1302,.reactorY=1525.5f,.reactorColor="#ffff00",.reactorChimney="#00ff00",
-    .reactorDoor="#ff0000",.reactorExplosion="#ffff00",
-    .shipX=805,.shipY=1350,.shipBulletColor="#00ff00",.refuelColor="#ffff00",
-    .shieldColor="#00ff00",.shipExplosion="#00ff00",
-    .podX=1128,.podY=1603,.podColor="#00ff00",.podBaseColor="#ffff00",.rodColor="#ff0000",
+    .starCount=50,.starLowerLimit=1300,
+    .reactorX=1302,.reactorY=1525.5f,
+    .shipX=805,.shipY=1350,
+    .podX=1128,.podY=1603,
     .enemies={{946,1594,205,180,0,0.02f}}, .enemyCount=1,
-    .enemyColor="#00ff00",.enemyBulletColor="#ff0000",.enemyExplosion="#ffff00",
     .tanks={{805,1558}}, .tankCount=1,
-    .tankColor="#ffff00",.tankLegs="#00ff00",.tankLabel="#ff0000",.tankExplosion="#00ff00",
     .doorCount=0,
     .endColorTop="#ff0000",.endColorMid="#00ff00",.endColorBot="#ffff00",
     .restartCount=0,
@@ -26,21 +22,16 @@ LevelDef gLevels[NUM_LEVELS] = {
 // ======= LEVEL 2 =======
 {
     .arenaW=2000,.arenaH=2500,.vpOfsX=420,.vpOfsY=1200,.gravity=0.11f,
-    .landscapeColor="#008800",
     .landscape={{0,1500},{574,1500},{678,1552},{878,1552},{1054,1640},{1054,1860},
                 {870,1952},{870,2033},{998,2097},{1143,2097},{1343,1996},{1343,1912},
                 {1207,1844},{1207,1609},{1425,1500},{2000,1500}},
     .lsCount=16,
-    .starCount=50,.starLowerLimit=1300,.starColorA="#ffff00",.starColorB="#ff0000",
-    .reactorX=820,.reactorY=1532.5f,.reactorColor="#ffff00",.reactorChimney="#ff0000",
-    .reactorDoor="#00ff00",.reactorExplosion="#ffff00",
-    .shipX=910,.shipY=1360,.shipBulletColor="#ff0000",.refuelColor="#ffff00",
-    .shieldColor="#ff0000",.shipExplosion="#ff0000",
-    .podX=1024,.podY=2064.5f,.podColor="#ff0000",.podBaseColor="#ffff00",.rodColor="#00ff00",
+    .starCount=50,.starLowerLimit=1300,
+    .reactorX=820,.reactorY=1532.5f,
+    .shipX=910,.shipY=1360,
+    .podX=1024,.podY=2064.5f,
     .enemies={{1266,1888,26.5f,200,-18,0.02f},{960,1920,333,190,0,0.02f}}, .enemyCount=2,
-    .enemyColor="#ff0000",.enemyBulletColor="#00ff00",.enemyExplosion="#ffff00",
     .tanks={{1118,2077}}, .tankCount=1,
-    .tankColor="#ffff00",.tankLegs="#ff0000",.tankLabel="#00ff00",.tankExplosion="#ff0000",
     .doorCount=0,
     .endColorTop="#00ff00",.endColorMid="#ff0000",.endColorBot="#ffff00",
     .restartCount=0,
@@ -48,7 +39,6 @@ LevelDef gLevels[NUM_LEVELS] = {
 // ======= LEVEL 3 =======
 {
     .arenaW=2000,.arenaH=3000,.vpOfsX=240,.vpOfsY=1200,.gravity=0.13f,
-    .landscapeColor="#008888",
     .landscape={{0,1500},{880,1500},{880,1821},{800,1860},{800,2061},
                 {566,2061},{480,2104},{480,2225},{366,2225},{280,2268},
                 {280,2609},{369,2652},{529,2652},{529,2432},{601,2396},
@@ -56,20 +46,16 @@ LevelDef gLevels[NUM_LEVELS] = {
                 {1241,1905},{1241,1821},{1049,1821},{1049,1580},{1233,1580},
                 {1233,1500},{2000,1500}},
     .lsCount=27,
-    .starCount=50,.starLowerLimit=1300,.starColorA="#ffff00",.starColorB="#ff0000",
-    .reactorX=1140,.reactorY=1560.5f,.reactorColor="#ffff00",.reactorChimney="#00ff00",
-    .reactorDoor="#00ffff",.reactorExplosion="#00ff00",
-    .shipX=720,.shipY=1360,.shipBulletColor="#00ff00",.refuelColor="#ffff00",
-    .shieldColor="#00ff00",.shipExplosion="#00ffff",
-    .podX=460,.podY=2620.5f,.podColor="#00ff00",.podBaseColor="#ffff00",.rodColor="#00ffff",
+    .starCount=50,.starLowerLimit=1300,
+    .reactorX=1140,.reactorY=1560.5f,
+    .shipX=720,.shipY=1360,
+    .podX=460,.podY=2620.5f,
     .enemies={
         {846,1852,333.5f,180,10,0.025f},{1193,1915,153,100,50,0.025f},
         {527,2093,333.5f,180,10,0.025f},{327,2258,333.5f,180,10,0.025f},
         {557,2405,153,100,50,0.025f}}, .enemyCount=5,
-    .enemyColor="#00ff00",.enemyBulletColor="#00ffff",.enemyExplosion="#ffff00",
     .tanks={{790,1480},{1025,1930},{1075,1930},{1125,1930},{820,2174},{635,2376}},
     .tankCount=6,
-    .tankColor="#ffff00",.tankLegs="#00ff00",.tankLabel="#00ffff",.tankExplosion="#ff0000",
     .doorCount=0,
     .endColorTop="#00ffff",.endColorMid="#00ff00",.endColorBot="#ffff00",
     .restartCount=3,
@@ -80,7 +66,6 @@ LevelDef gLevels[NUM_LEVELS] = {
 // ======= LEVEL 4 =======
 {
     .arenaW=2000,.arenaH=3200,.vpOfsX=250,.vpOfsY=1200,.gravity=0.14f,
-    .landscapeColor="#008800",
     .landscape={{0,1500},{519,1500},{680,1580},{808,1580},{808,1656},
                 {504,1816},{504,1896},{584,1935},{584,1961},{424,2040},
                 {424,2180},{624,2180},{792,2264},{1049,2264},{1049,2417},
@@ -88,22 +73,18 @@ LevelDef gLevels[NUM_LEVELS] = {
                 {1001,2712},{1193,2616},{1193,2085},{873,2085},{681,1989},
                 {681,1916},{921,1916},{921,1500},{2000,1500}},
     .lsCount=29,
-    .starCount=50,.starLowerLimit=1300,.starColorA="#ffff00",.starColorB="#ff0000",
-    .reactorX=546,.reactorY=2160.5f,.reactorColor="#ffff00",.reactorChimney="#ff00ff",
-    .reactorDoor="#00ff00",.reactorExplosion="#ffff00",
-    .shipX=720,.shipY=1360,.shipBulletColor="#ff00ff",.refuelColor="#ffff00",
-    .shieldColor="#ff00ff",.shipExplosion="#ff0000",
-    .podX=955,.podY=2763.5f,.podColor="#ff00ff",.podBaseColor="#ffff00",.rodColor="#00ff00",
+    .starCount=50,.starLowerLimit=1300,
+    .reactorX=546,.reactorY=2160.5f,
+    .shipX=720,.shipY=1360,
+    .podX=955,.podY=2763.5f,
     .enemies={
         {738,1706,331.5f,180,10,0.025f},{543,1902,206,180,10,0.025f},
         {544,1993,333.5f,180,10,0.025f},{693,2200,206,180,10,0.025f},
         {777,2051,26,180,10,0.025f},{930,2490,333.5f,180,10,0.025f},
         {1111,2643,153.5f,180,10,0.025f}}, .enemyCount=7,
-    .enemyColor="#ff00ff",.enemyBulletColor="#00ff00",.enemyExplosion="#ffff00",
     .tanks={0}, .tankCount=0,
-    .tankColor="#ffff00",.tankLegs="#ff00ff",.tankLabel="#00ff00",.tankExplosion="#ff0000",
     .doors={{
-        .x=1043,.y=2308,.doorColor="#008800",.keyColor="#ffff00",
+        .x=1043,.y=2308,
         .stateCount=11,
         .verts={{{0,0},{164,0},{164,50},{0,50}},
                 {{0,0},{149,0},{149,50},{0,50}},
@@ -129,7 +110,6 @@ LevelDef gLevels[NUM_LEVELS] = {
 // ======= LEVEL 5 =======
 {
     .arenaW=2000,.arenaH=3900,.vpOfsX=180,.vpOfsY=1250,.gravity=0.15f,
-    .landscapeColor="#880000",
     .landscape={{0,1500},{431,1500},{599,1584},{599,1676},{783,1676},
                 {783,2001},{710,2001},{607,2052},{607,2168},{687,2168},
                 {687,2329},{527,2409},{367,2409},{367,2757},{527,2836},
@@ -141,23 +121,19 @@ LevelDef gLevels[NUM_LEVELS] = {
                 {800,2329},{800,2168},{1087,2168},{1087,2044},{1001,2001},
                 {896,2001},{896,1500},{2000,1500}},
     .lsCount=48,
-    .starCount=50,.starLowerLimit=1300,.starColorA="#ffff00",.starColorB="#ff0000",
-    .reactorX=891,.reactorY=2148.5f,.reactorColor="#ffff00",.reactorChimney="#ff00ff",
-    .reactorDoor="#ff0000",.reactorExplosion="#ffff00",
-    .shipX=625,.shipY=1402,.shipBulletColor="#ff00ff",.refuelColor="#ffff00",
-    .shieldColor="#ff00ff",.shipExplosion="#ff00ff",
-    .podX=1043,.podY=3563.5f,.podColor="#ff00ff",.podBaseColor="#ffff00",.rodColor="#ff0000",
+    .starCount=50,.starLowerLimit=1300,
+    .reactorX=891,.reactorY=2148.5f,
+    .shipX=625,.shipY=1402,
+    .podX=1043,.podY=3563.5f,
     .enemies={
         {664,2037,333.5f,180,10,0.025f},{1039,2034,26.5f,180,10,0.025f},
         {816,2503,153.5f,180,10,0.025f},{494,3018,205.5f,180,10,0.025f},
         {878,3009,26,180,10,0.025f},{736,3190,203.5f,180,10,0.025f},
         {1119,3406,26,180,10,0.025f}}, .enemyCount=7,
-    .enemyColor="#ff00ff",.enemyBulletColor="#ff0000",.enemyExplosion="#00ff00",
     .tanks={{735,1657},{976,2149},{1027,2149},{576,2517},{583,3040},
             {635,3040},{839,3207},{890,3207}}, .tankCount=8,
-    .tankColor="#ffff00",.tankLegs="#ff00ff",.tankLabel="#ff0000",.tankExplosion="#ff0000",
     .doors={{
-        .x=930,.y=3346,.doorColor="#880000",.keyColor="#ffff00",
+        .x=930,.y=3346,
         .stateCount=10,
         .verts={{{0,0},{140,0},{140,-82},{0,-82}},
                 {{0,0},{140,0},{140,-72},{0,-72}},
@@ -182,7 +158,6 @@ LevelDef gLevels[NUM_LEVELS] = {
 // ======= LEVEL 6 =======
 {
     .arenaW=2000,.arenaH=4300,.vpOfsX=323,.vpOfsY=1450,.gravity=0.16f,
-    .landscapeColor="#880088",
     .landscape={{0,1500},{511,1500},{511,1752},{695,1752},{1334,2072},
                 {1334,2232},{1181,2232},{1094,2276},{1094,2925},{958,2925},
                 {958,3145},{854,3196},{854,3277},{1286,3492},{1286,3549},
@@ -194,12 +169,10 @@ LevelDef gLevels[NUM_LEVELS] = {
                 {1607,2312},{1447,2233},{1447,1972},{1008,1753},{1008,1672},
                 {1352,1500},{2000,1500}},
     .lsCount=47,
-    .starCount=50,.starLowerLimit=1300,.starColorA="#ffff00",.starColorB="#ff0000",
-    .reactorX=1264,.reactorY=4103.5f,.reactorColor="#ffff00",.reactorChimney="#00ffff",
-    .reactorDoor="#ff00ff",.reactorExplosion="#ffff00",
-    .shipX=792,.shipY=1555,.shipBulletColor="#00ffff",.refuelColor="#ffff00",
-    .shieldColor="#00ffff",.shipExplosion="#00ffff",
-    .podX=1146,.podY=3967.5f,.podColor="#00ffff",.podBaseColor="#ffff00",.rodColor="#ff00ff",
+    .starCount=50,.starLowerLimit=1300,
+    .reactorX=1264,.reactorY=4103.5f,
+    .shipX=792,.shipY=1555,
+    .podX=1146,.podY=3967.5f,
     .enemies={
         {1136,1831,26.5f,180,0,0.025f},{1525,2285,26.5f,180,0,0.025f},
         {1286,2443,153.5f,180,0,0.025f},{1141,2265,333.5f,180,0,0.025f},
@@ -207,11 +180,9 @@ LevelDef gLevels[NUM_LEVELS] = {
         {906,3184,333.5f,180,0,0.025f},{1153,3234,28,180,0,0.025f},
         {1224,3593,333.5f,180,0,0.025f},{1152,3753,333.5f,180,0,0.025f},
         {1310,3820,153.5f,180,0,0.025f}}, .enemyCount=11,
-    .enemyColor="#00ffff",.enemyBulletColor="#ff00ff",.enemyExplosion="#ffff00",
     .tanks={{1454,2376},{1143,3021}}, .tankCount=2,
-    .tankColor="#ffff00",.tankLegs="#00ffff",.tankLabel="#ff00ff",.tankExplosion="#ff0000",
     .doors={{
-        .x=1280,.y=3492,.doorColor="#880088",.keyColor="#ffff00",
+        .x=1280,.y=3492,
         .stateCount=12,
         .verts={{{0,0},{171,0},{225,28},{171,57},{0,57}},
                 {{0,0},{156,0},{210,28},{156,57},{0,57}},
@@ -237,3 +208,59 @@ LevelDef gLevels[NUM_LEVELS] = {
     .restartHasPod={false,false,false,false,true,true,true},
 },
 };
+
+void InitLevelColors(LevelDef *lv, int levelIdx) {
+    switch (levelIdx) {
+    case 0: // Level 1
+        lv->landscapeColor=LEVEL1COLOR; lv->starColorA=C_YELLOW; lv->starColorB=C_GREEN;
+        lv->reactorColor=C_YELLOW; lv->reactorChimney=C_GREEN; lv->reactorDoor=C_RED; lv->reactorExplosion=C_YELLOW;
+        lv->shipBulletColor=C_GREEN; lv->refuelColor=C_YELLOW; lv->shieldColor=C_GREEN; lv->shipExplosion=C_GREEN;
+        lv->podColor=C_GREEN; lv->podBaseColor=C_YELLOW; lv->rodColor=C_RED;
+        lv->enemyColor=C_GREEN; lv->enemyBulletColor=C_RED; lv->enemyExplosion=C_YELLOW;
+        lv->tankColor=C_YELLOW; lv->tankLegs=C_GREEN; lv->tankLabel=C_RED; lv->tankExplosion=C_GREEN;
+        break;
+    case 1: // Level 2
+        lv->landscapeColor=LEVEL2COLOR; lv->starColorA=C_YELLOW; lv->starColorB=C_RED;
+        lv->reactorColor=C_YELLOW; lv->reactorChimney=C_RED; lv->reactorDoor=C_GREEN; lv->reactorExplosion=C_YELLOW;
+        lv->shipBulletColor=C_RED; lv->refuelColor=C_YELLOW; lv->shieldColor=C_RED; lv->shipExplosion=C_RED;
+        lv->podColor=C_RED; lv->podBaseColor=C_YELLOW; lv->rodColor=C_GREEN;
+        lv->enemyColor=C_RED; lv->enemyBulletColor=C_GREEN; lv->enemyExplosion=C_YELLOW;
+        lv->tankColor=C_YELLOW; lv->tankLegs=C_RED; lv->tankLabel=C_GREEN; lv->tankExplosion=C_RED;
+        break;
+    case 2: // Level 3
+        lv->landscapeColor=LEVEL3COLOR; lv->starColorA=C_YELLOW; lv->starColorB=C_RED;
+        lv->reactorColor=C_YELLOW; lv->reactorChimney=C_GREEN; lv->reactorDoor=C_CYAN; lv->reactorExplosion=C_GREEN;
+        lv->shipBulletColor=C_GREEN; lv->refuelColor=C_YELLOW; lv->shieldColor=C_GREEN; lv->shipExplosion=C_CYAN;
+        lv->podColor=C_GREEN; lv->podBaseColor=C_YELLOW; lv->rodColor=C_CYAN;
+        lv->enemyColor=C_GREEN; lv->enemyBulletColor=C_CYAN; lv->enemyExplosion=C_YELLOW;
+        lv->tankColor=C_YELLOW; lv->tankLegs=C_GREEN; lv->tankLabel=C_CYAN; lv->tankExplosion=C_RED;
+        break;
+    case 3: // Level 4
+        lv->landscapeColor=LEVEL4COLOR; lv->starColorA=C_YELLOW; lv->starColorB=C_RED;
+        lv->reactorColor=C_YELLOW; lv->reactorChimney=C_MAGENTA; lv->reactorDoor=C_GREEN; lv->reactorExplosion=C_YELLOW;
+        lv->shipBulletColor=C_MAGENTA; lv->refuelColor=C_YELLOW; lv->shieldColor=C_MAGENTA; lv->shipExplosion=C_RED;
+        lv->podColor=C_MAGENTA; lv->podBaseColor=C_YELLOW; lv->rodColor=C_GREEN;
+        lv->enemyColor=C_MAGENTA; lv->enemyBulletColor=C_GREEN; lv->enemyExplosion=C_YELLOW;
+        lv->tankColor=C_YELLOW; lv->tankLegs=C_MAGENTA; lv->tankLabel=C_GREEN; lv->tankExplosion=C_RED;
+        lv->doors[0].doorColor=LEVEL4COLOR; lv->doors[0].keyColor=C_YELLOW;
+        break;
+    case 4: // Level 5
+        lv->landscapeColor=LEVEL5COLOR; lv->starColorA=C_YELLOW; lv->starColorB=C_RED;
+        lv->reactorColor=C_YELLOW; lv->reactorChimney=C_MAGENTA; lv->reactorDoor=C_RED; lv->reactorExplosion=C_YELLOW;
+        lv->shipBulletColor=C_MAGENTA; lv->refuelColor=C_YELLOW; lv->shieldColor=C_MAGENTA; lv->shipExplosion=C_MAGENTA;
+        lv->podColor=C_MAGENTA; lv->podBaseColor=C_YELLOW; lv->rodColor=C_RED;
+        lv->enemyColor=C_MAGENTA; lv->enemyBulletColor=C_RED; lv->enemyExplosion=C_GREEN;
+        lv->tankColor=C_YELLOW; lv->tankLegs=C_MAGENTA; lv->tankLabel=C_RED; lv->tankExplosion=C_RED;
+        lv->doors[0].doorColor=LEVEL5COLOR; lv->doors[0].keyColor=C_YELLOW;
+        break;
+    case 5: // Level 6
+        lv->landscapeColor=LEVEL6COLOR; lv->starColorA=C_YELLOW; lv->starColorB=C_RED;
+        lv->reactorColor=C_YELLOW; lv->reactorChimney=C_CYAN; lv->reactorDoor=C_MAGENTA; lv->reactorExplosion=C_YELLOW;
+        lv->shipBulletColor=C_CYAN; lv->refuelColor=C_YELLOW; lv->shieldColor=C_CYAN; lv->shipExplosion=C_CYAN;
+        lv->podColor=C_CYAN; lv->podBaseColor=C_YELLOW; lv->rodColor=C_MAGENTA;
+        lv->enemyColor=C_CYAN; lv->enemyBulletColor=C_MAGENTA; lv->enemyExplosion=C_YELLOW;
+        lv->tankColor=C_YELLOW; lv->tankLegs=C_CYAN; lv->tankLabel=C_MAGENTA; lv->tankExplosion=C_RED;
+        lv->doors[0].doorColor=LEVEL6COLOR; lv->doors[0].keyColor=C_YELLOW;
+        break;
+    }
+}

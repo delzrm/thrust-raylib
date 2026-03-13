@@ -1,5 +1,6 @@
 #pragma once
 // ===================== LEVEL DATA TYPES & DECLARATIONS =====================
+#include "Colours.h"
 #include <stdbool.h>
 
 #define MAX_LS       55   // max landscape points per level
@@ -24,28 +25,28 @@ typedef struct {
     int vertCount[MAX_DSTATES];
     float keyholes[MAX_KEYS][2];
     int keyholeCount;
-    const char *doorColor;
-    const char *keyColor;
+    Color doorColor;
+    Color keyColor;
 } DoorDef;
 
 typedef struct {
     int arenaW, arenaH;
     float vpOfsX, vpOfsY;
     float gravity;
-    const char *landscapeColor;
+    Color landscapeColor;
     LPt landscape[MAX_LS]; int lsCount;
     int starCount; int starLowerLimit;
-    const char *starColorA, *starColorB;
+    Color starColorA, starColorB;
     float reactorX, reactorY;
-    const char *reactorColor, *reactorChimney, *reactorDoor, *reactorExplosion;
+    Color reactorColor, reactorChimney, reactorDoor, reactorExplosion;
     float shipX, shipY;
-    const char *shipBulletColor, *refuelColor, *shieldColor, *shipExplosion;
+    Color shipBulletColor, refuelColor, shieldColor, shipExplosion;
     float podX, podY;
-    const char *podColor, *podBaseColor, *rodColor;
+    Color podColor, podBaseColor, rodColor;
     EnemyDef enemies[MAX_ENEMIES]; int enemyCount;
-    const char *enemyColor, *enemyBulletColor, *enemyExplosion;
+    Color enemyColor, enemyBulletColor, enemyExplosion;
     TankDef tanks[MAX_TANKS]; int tankCount;
-    const char *tankColor, *tankLegs, *tankLabel, *tankExplosion;
+    Color tankColor, tankLegs, tankLabel, tankExplosion;
     DoorDef doors[MAX_DOORS]; int doorCount;
     const char *endColorTop, *endColorMid, *endColorBot;
     RestartPt restarts[MAX_RESTART]; int restartCount;
@@ -54,3 +55,4 @@ typedef struct {
 } LevelDef;
 
 extern LevelDef gLevels[NUM_LEVELS];
+void InitLevelColors(LevelDef *lv, int levelIdx);

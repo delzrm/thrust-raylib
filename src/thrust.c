@@ -7,6 +7,7 @@
 #include "Types.h"
 #include "VectorFont.h"
 #include "HUD.h"
+#include "Colours.h"
 #include "Explosions.h"
 #include "BlackHoles.h"
 #include <math.h>
@@ -34,35 +35,6 @@
 // MAX_KEYS, MAX_RESTART, NUM_LEVELS are defined in Levels.h
 #define MAX_BULLETS  40
 #define MAX_STARS    55
-
-// ===================== COLOR HELPERS =====================
-static Color HexColor(unsigned r, unsigned g, unsigned b) {
-    return (Color){r, g, b, 255};
-}
-#define C_YELLOW  HexColor(255,255,0)
-#define C_GREEN   HexColor(0,255,0)
-#define C_RED     HexColor(255,0,0)
-#define C_BLUE    HexColor(0,0,255)
-#define C_CYAN    HexColor(0,255,255)
-#define C_MAGENTA HexColor(255,0,255)
-#define C_WHITE   HexColor(255,255,255)
-#define C_BLACK   CLITERAL(Color){0,0,0,255}
-#define C_GRAY    HexColor(136,136,136)
-
-static Color ParseHex(const char *h) {
-    if (!h || h[0] != '#') return C_WHITE;
-    unsigned r = 0, g = 0, b = 0;
-    for (int i = 1; i <= 6 && h[i]; i++) {
-        char c = h[i];
-        unsigned v = (c>='0'&&c<='9') ? (unsigned)(c-'0') :
-                     (c>='a'&&c<='f') ? (unsigned)(c-'a'+10) :
-                     (c>='A'&&c<='F') ? (unsigned)(c-'A'+10) : 0u;
-        if      (i <= 2) r = (r << 4) | v;
-        else if (i <= 4) g = (g << 4) | v;
-        else             b = (b << 4) | v;
-    }
-    return HexColor(r, g, b);
-}
 
 // ===================== MATH UTILITIES =====================
 static float DTR(float deg) { return (deg - 90.0f) * DEG2RAD; }  // JS DegreesToRadians
@@ -276,7 +248,7 @@ static void InitStars(void) {
         float px = (float)(rand() % lv->arenaW);
         float py = (float)(rand() % lv->starLowerLimit);
         ar->stars[i] = (V2){px, py};
-        ar->starColors[i] = (rand()%10 < 7) ? ParseHex(lv->starColorA) : ParseHex(lv->starColorB);
+        ar->starColors[i] = (rand()%10 < 7) ? lv->starColorA : lv->starColorB;
     }
 }
 
@@ -289,7 +261,7 @@ static void DrawStars(void) {
     float px = (float)(rand() % lv->arenaW);
     float py = (float)(rand() % lv->starLowerLimit);
     ar->stars[ri] = (V2){px, py};
-    ar->starColors[ri] = (rand()%10 < 7) ? ParseHex(lv->starColorA) : ParseHex(lv->starColorB);
+    ar->starColors[ri] = (rand()%10 < 7) ? lv->starColorA : lv->starColorB;
 
     for (int i = 0; i < lv->starCount && i < MAX_STARS; i++) {
         for (int rep = -1; rep <= 1; rep++) {
@@ -324,7 +296,7 @@ static void DrawShip(void) {
 
     // Shield arcs — not part of the mesh
     if (s->shield && ((int)gGame.age % 2 == 0)) {
-        Color sc = ParseHex(gGame.level.shieldColor);
+        Color sc = gGame.level.shieldColor;
         for (int seg = 0; seg < 3; seg++) {
             float a1 = theta + seg * 2.0f * PI / 3.0f;
             float a2 = theta + (seg+1) * 2.0f * PI / 3.0f;
@@ -334,7 +306,7 @@ static void DrawShip(void) {
     }
 
     if (s->refuelling) {
-        Color rc = ParseHex(gGame.level.refuelColor);
+        Color rc = gGame.level.refuelColor;
         DrawLine((int)(cx+11),(int)(cy+16),(int)(cx+34),(int)(cy+80), rc);
         DrawLine((int)(cx-11),(int)(cy+16),(int)(cx-34),(int)(cy+80), rc);
     }
@@ -342,7 +314,7 @@ static void DrawShip(void) {
 
 // ===================== POD DRAWING =====================
 static void DrawPodRod(void) {
-    Color rc = ParseHex(gGame.level.rodColor);
+    Color rc = gGame.level.rodColor;
     DrawLine(SX(gGame.ship.x), SY(gGame.ship.y),
              SX(gGame.pod.x),  SY(gGame.pod.y), rc);
 }
@@ -351,8 +323,8 @@ static void DrawPod(void) {
     Pod *p = &gGame.pod;
     if (!p->active) return;
     float px = SXf(p->x), py = SYf(p->y);
-    Color pc = ParseHex(gGame.level.podColor);
-    Color bc = ParseHex(gGame.level.podBaseColor);
+    Color pc = gGame.level.podColor;
+    Color bc = gGame.level.podBaseColor;
     DrawPodMesh(px, py, !gGame.ship.podConnected, pc, bc);
 }
 
@@ -372,7 +344,7 @@ static void InitEnemy(Enemy *e, EnemyDef *d) {
 }
 
 static void DrawEnemy(Enemy *e) {
-    Color ec = ParseHex(gGame.level.enemyColor);
+    Color ec = gGame.level.enemyColor;
     // Recover world-space centre from dome: dome = (cx + 19*cos(ori), cy + 19*sin(ori))
     float cx = e->dome.x - 19.0f * cosf(e->ori);
     float cy = e->dome.y - 19.0f * sinf(e->ori);
@@ -395,9 +367,9 @@ static void InitTank(Tank *t, TankDef *d) {
 
 static void DrawTank(Tank *t) {
     DrawTankMesh(SXf(t->x), SYf(t->y),
-                 ParseHex(gGame.level.tankColor),
-                 ParseHex(gGame.level.tankLegs),
-                 ParseHex(gGame.level.tankLabel));
+                 gGame.level.tankColor,
+                 gGame.level.tankLegs,
+                 gGame.level.tankLabel);
 }
 
 // ===================== REACTOR DRAWING =====================
@@ -410,9 +382,9 @@ static void DrawReactor(void) {
     //if (r->damage > 0) r->damage -= 0.02f;
     bool drawSmoke = (gGame.age > r->drawSmoke);
     DrawReactorMesh(rsx, rsy,
-                    ParseHex(gGame.level.reactorColor),
-                    ParseHex(gGame.level.reactorChimney),
-                    ParseHex(gGame.level.reactorDoor),
+                    gGame.level.reactorColor,
+                    gGame.level.reactorChimney,
+                    gGame.level.reactorDoor,
                     r->smokeY, drawSmoke,
                     r->damage, r->maxDamage);
     if (drawSmoke) {
@@ -426,8 +398,8 @@ static void DrawReactor(void) {
 // ===================== DOOR DRAWING =====================
 static void DrawDoor(Door *d, bool invisible) {
     const DoorDef *def = d->def;
-    Color dc = invisible ? C_BLACK : ParseHex(def->doorColor);
-    Color kc = ParseHex(def->keyColor);
+    Color dc = invisible ? INVISCOLOR : def->doorColor;
+    Color kc = def->keyColor;
     DrawDoorMesh(def, d->state, gGame.arena.vpOfsX, gGame.arena.vpOfsY, dc, kc);
 }
 
@@ -508,7 +480,7 @@ static void ShipCalcPosition(void) {
         g->pod.active = false;
         if (s->podConnected || skipLevel) {
             AddBlackHole(s->x, s->y, C_YELLOW, "MissionComplete");
-            AddBlackHole(g->pod.x, g->pod.y, ParseHex(g->level.podColor), "MissionComplete");
+            AddBlackHole(g->pod.x, g->pod.y, g->level.podColor, "MissionComplete");
             gBonusScore = (g->reactor.countdown < 10) ?
                 (3600 + g->curLevel*400) : (1600 + g->curLevel*400);
         } else {
@@ -609,7 +581,7 @@ static void ShipDie(float sx, float sy, bool jumpLevel) {
         if (gGame.reactor.countdown <= 0) gGame.lastDieY = 0;
     }
 
-    Color shipExp = ParseHex(gGame.level.shipExplosion);
+    Color shipExp = gGame.level.shipExplosion;
     AddExplosionColored(sx, sy, true, shipExp, gGame.level.gravity);
     if (s->podConnected) {
         gGame.pod.active = false;
@@ -677,21 +649,21 @@ static void ReactorCountdown(void) {
         r->timer += 10000;
         gPlanetExpPos = 1;
         // Destroy everything
-        Color se = ParseHex(gGame.level.shipExplosion);
+        Color se = gGame.level.shipExplosion;
         AddExplosionColored(SXf(gGame.ship.x), SYf(gGame.ship.y), true, se, gGame.level.gravity);
         ShipDie(SXf(gGame.ship.x), SYf(gGame.ship.y), true);
         gGame.pod.active = false;
         for (int i = 0; i < gGame.enemyCount; i++) {
-            Color ee = ParseHex(gGame.level.enemyExplosion);
+            Color ee = gGame.level.enemyExplosion;
             AddExplosionColored(SXf(gGame.enemies[i].gun.x), SYf(gGame.enemies[i].gun.y), true, ee, gGame.level.gravity);
         }
         gGame.enemyCount = 0;
         for (int i = 0; i < gGame.tankCount; i++) {
-            Color te = ParseHex(gGame.level.tankExplosion);
+            Color te = gGame.level.tankExplosion;
             AddExplosionColored(SXf(gGame.tanks[i].x), SYf(gGame.tanks[i].y), true, te, gGame.level.gravity);
         }
         gGame.tankCount = 0;
-        Color re = ParseHex(gGame.level.reactorExplosion);
+        Color re = gGame.level.reactorExplosion;
         AddExplosionColored(SXf(r->x), SYf(r->y), true, re, gGame.level.gravity);
         r->active = false;
     }
@@ -825,7 +797,7 @@ static void ReDraw(void) {
                 {
                     bool playerBullet = !b->enemyFire;
                     gGame.bullets[bi] = gGame.bullets[--gGame.bulletCount]; removed=true;
-                    if (playerBullet) AddExplosionColored(SXf(ox), SYf(oy), false, ParseHex(gGame.level.landscapeColor), gGame.level.gravity);
+                    if (playerBullet) AddExplosionColored(SXf(ox), SYf(oy), false, gGame.level.landscapeColor, gGame.level.gravity);
                 }
             }
             if (removed || bi >= gGame.bulletCount) continue;
@@ -902,7 +874,7 @@ static void ReDraw(void) {
                         CheckIntersect(b->prevX,b->prevY,b->x,b->y,
                         e->body[4].x,e->body[4].y,e->body[5].x,e->body[5].y,&ox,&oy))
                     {
-                        Color ee = ParseHex(gGame.level.enemyExplosion);
+                        Color ee = gGame.level.enemyExplosion;
                         AddExplosionColored(SXf(ox),SYf(oy),true,ee,gGame.level.gravity);
                         gGame.enemies[ei] = gGame.enemies[--gGame.enemyCount];
                         gGame.bullets[bi] = gGame.bullets[--gGame.bulletCount]; removed=true;
@@ -923,7 +895,7 @@ static void ReDraw(void) {
                         r->countdownStarted = true;
                         ReactorCountdown();
                     }
-                    Color re = ParseHex(gGame.level.reactorExplosion);
+                    Color re = gGame.level.reactorExplosion;
                     AddExplosionColored(SXf(ox),SYf(oy),false,re,gGame.level.gravity);
                 }
                 if (removed || bi >= gGame.bulletCount) continue;
@@ -935,7 +907,7 @@ static void ReDraw(void) {
                         if (CheckIntersect(b->prevX,b->prevY,b->x,b->y,
                             t->corners[j].x,t->corners[j].y,t->corners[j+1].x,t->corners[j+1].y,&ox,&oy))
                         {
-                            Color te = ParseHex(gGame.level.tankExplosion);
+                            Color te = gGame.level.tankExplosion;
                             AddExplosionColored(SXf(ox),SYf(oy),true,te,gGame.level.gravity);
                             gGame.tanks[ti]=gGame.tanks[--gGame.tankCount];
                             gGame.bullets[bi]=gGame.bullets[--gGame.bulletCount]; removed=true;
@@ -1031,7 +1003,7 @@ static void ReDraw(void) {
     // Draw bullets
     for (int i = 0; i < gGame.bulletCount; i++) {
         Bullet *b = &gGame.bullets[i];
-        Color bc = b->enemyFire ? ParseHex(gGame.level.enemyBulletColor) : ParseHex(gGame.level.shipBulletColor);
+        Color bc = b->enemyFire ? gGame.level.enemyBulletColor : gGame.level.shipBulletColor;
         DrawRectangle(SX(b->x)-1, SY(b->y)-1, 3, 3, bc);
     }
 
@@ -1097,10 +1069,11 @@ static void LoadLevel(int lvl) {
 
     gGame.curLevel = lvl;
     gGame.level = gLevels[lvl-1];
+    InitLevelColors(&gGame.level, lvl-1);
     if (reverseGravity) gGame.level.gravity = -gGame.level.gravity;
     LevelDef *lv = &gGame.level;
     CreateLandscapeMesh((const Vert2D*)lv->landscape, lv->lsCount,
-                        (float)lv->arenaH, ParseHex(lv->landscapeColor));
+                        (float)lv->arenaH, lv->landscapeColor);
 }
 
 static void SetNewPosition(bool hasPod, float shipX, float shipY) {

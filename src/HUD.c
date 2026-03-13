@@ -1,15 +1,12 @@
 #include "HUD.h"
+#include "Colours.h"
 #include "VectorFont.h"
 #include "rlgl.h"
 #include <stdio.h>
 #include <string.h>
 
-// ---- Local colour helpers ----
+// ---- Local colour helpers (HexColor/ParseHex used by DrawMessage tag parser) ----
 static Color HexColor(unsigned r, unsigned g, unsigned b) { return (Color){r, g, b, 255}; }
-#define C_YELLOW  HexColor(255,255,0)
-#define C_GREEN   HexColor(0,255,0)
-#define C_WHITE   HexColor(255,255,255)
-#define C_BLACK   CLITERAL(Color){0,0,0,255}
 
 static Color ParseHex(const char *h) {
     if (!h || h[0] != '#') return C_WHITE;
