@@ -407,7 +407,7 @@ static void DrawReactor(void) {
     if (r->damage >= r->maxDamage && ((int)gGame.age % 6 < 3)) return;
 
     float rsx = SXf(r->x), rsy = SYf(r->y);
-    if (r->damage > 0) r->damage -= 0.02f;
+    //if (r->damage > 0) r->damage -= 0.02f;
     bool drawSmoke = (gGame.age > r->drawSmoke);
     DrawReactorMesh(rsx, rsy,
                     ParseHex(gGame.level.reactorColor),
