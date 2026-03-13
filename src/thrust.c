@@ -368,7 +368,6 @@ static void InitTank(Tank *t, TankDef *d) {
 static void DrawTank(Tank *t) {
     DrawTankMesh(SXf(t->x), SYf(t->y),
                  gGame.level.tankColor,
-                 gGame.level.tankLegs,
                  gGame.level.tankLabel);
 }
 

@@ -217,7 +217,7 @@ void InitLevelColors(LevelDef *lv, int levelIdx) {
         lv->shipBulletColor=C_GREEN; lv->refuelColor=C_YELLOW; lv->shieldColor=C_GREEN; lv->shipExplosion=C_GREEN;
         lv->podColor=C_GREEN; lv->podBaseColor=C_YELLOW; lv->rodColor=C_RED;
         lv->enemyColor=C_GREEN; lv->enemyBulletColor=C_RED; lv->enemyExplosion=C_YELLOW;
-        lv->tankColor=C_YELLOW; lv->tankLegs=C_GREEN; lv->tankLabel=C_RED; lv->tankExplosion=C_GREEN;
+        lv->tankColor=C_YELLOW; lv->tankLabel=C_RED; lv->tankExplosion=C_GREEN;
         break;
     case 1: // Level 2
         lv->landscapeColor=LEVEL2COLOR; lv->starColorA=C_YELLOW; lv->starColorB=C_RED;
@@ -225,7 +225,7 @@ void InitLevelColors(LevelDef *lv, int levelIdx) {
         lv->shipBulletColor=C_RED; lv->refuelColor=C_YELLOW; lv->shieldColor=C_RED; lv->shipExplosion=C_RED;
         lv->podColor=C_RED; lv->podBaseColor=C_YELLOW; lv->rodColor=C_GREEN;
         lv->enemyColor=C_RED; lv->enemyBulletColor=C_GREEN; lv->enemyExplosion=C_YELLOW;
-        lv->tankColor=C_YELLOW; lv->tankLegs=C_RED; lv->tankLabel=C_GREEN; lv->tankExplosion=C_RED;
+        lv->tankColor=C_YELLOW; lv->tankLabel=C_GREEN; lv->tankExplosion=C_RED;
         break;
     case 2: // Level 3
         lv->landscapeColor=LEVEL3COLOR; lv->starColorA=C_YELLOW; lv->starColorB=C_RED;
@@ -233,7 +233,7 @@ void InitLevelColors(LevelDef *lv, int levelIdx) {
         lv->shipBulletColor=C_GREEN; lv->refuelColor=C_YELLOW; lv->shieldColor=C_GREEN; lv->shipExplosion=C_CYAN;
         lv->podColor=C_GREEN; lv->podBaseColor=C_YELLOW; lv->rodColor=C_CYAN;
         lv->enemyColor=C_GREEN; lv->enemyBulletColor=C_CYAN; lv->enemyExplosion=C_YELLOW;
-        lv->tankColor=C_YELLOW; lv->tankLegs=C_GREEN; lv->tankLabel=C_CYAN; lv->tankExplosion=C_RED;
+        lv->tankColor=C_YELLOW; lv->tankLabel=C_CYAN; lv->tankExplosion=C_RED;
         break;
     case 3: // Level 4
         lv->landscapeColor=LEVEL4COLOR; lv->starColorA=C_YELLOW; lv->starColorB=C_RED;
@@ -241,7 +241,7 @@ void InitLevelColors(LevelDef *lv, int levelIdx) {
         lv->shipBulletColor=C_MAGENTA; lv->refuelColor=C_YELLOW; lv->shieldColor=C_MAGENTA; lv->shipExplosion=C_RED;
         lv->podColor=C_MAGENTA; lv->podBaseColor=C_YELLOW; lv->rodColor=C_GREEN;
         lv->enemyColor=C_MAGENTA; lv->enemyBulletColor=C_GREEN; lv->enemyExplosion=C_YELLOW;
-        lv->tankColor=C_YELLOW; lv->tankLegs=C_MAGENTA; lv->tankLabel=C_GREEN; lv->tankExplosion=C_RED;
+        lv->tankColor=C_YELLOW; lv->tankLabel=C_GREEN; lv->tankExplosion=C_RED;
         lv->doors[0].doorColor=LEVEL4COLOR; lv->doors[0].keyColor=C_YELLOW;
         break;
     case 4: // Level 5
@@ -250,7 +250,7 @@ void InitLevelColors(LevelDef *lv, int levelIdx) {
         lv->shipBulletColor=C_MAGENTA; lv->refuelColor=C_YELLOW; lv->shieldColor=C_MAGENTA; lv->shipExplosion=C_MAGENTA;
         lv->podColor=C_MAGENTA; lv->podBaseColor=C_YELLOW; lv->rodColor=C_RED;
         lv->enemyColor=C_MAGENTA; lv->enemyBulletColor=C_RED; lv->enemyExplosion=C_GREEN;
-        lv->tankColor=C_YELLOW; lv->tankLegs=C_MAGENTA; lv->tankLabel=C_RED; lv->tankExplosion=C_RED;
+        lv->tankColor=C_YELLOW; lv->tankLabel=C_RED; lv->tankExplosion=C_RED;
         lv->doors[0].doorColor=LEVEL5COLOR; lv->doors[0].keyColor=C_YELLOW;
         break;
     case 5: // Level 6
@@ -259,7 +259,7 @@ void InitLevelColors(LevelDef *lv, int levelIdx) {
         lv->shipBulletColor=C_CYAN; lv->refuelColor=C_YELLOW; lv->shieldColor=C_CYAN; lv->shipExplosion=C_CYAN;
         lv->podColor=C_CYAN; lv->podBaseColor=C_YELLOW; lv->rodColor=C_MAGENTA;
         lv->enemyColor=C_CYAN; lv->enemyBulletColor=C_MAGENTA; lv->enemyExplosion=C_YELLOW;
-        lv->tankColor=C_YELLOW; lv->tankLegs=C_CYAN; lv->tankLabel=C_MAGENTA; lv->tankExplosion=C_RED;
+        lv->tankColor=C_YELLOW; lv->tankLabel=C_MAGENTA; lv->tankExplosion=C_RED;
         lv->doors[0].doorColor=LEVEL6COLOR; lv->doors[0].keyColor=C_YELLOW;
         break;
     }

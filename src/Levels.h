@@ -46,7 +46,7 @@ typedef struct {
     EnemyDef enemies[MAX_ENEMIES]; int enemyCount;
     Color enemyColor, enemyBulletColor, enemyExplosion;
     TankDef tanks[MAX_TANKS]; int tankCount;
-    Color tankColor, tankLegs, tankLabel, tankExplosion;
+    Color tankColor, tankLabel, tankExplosion;
     DoorDef doors[MAX_DOORS]; int doorCount;
     const char *endColorTop, *endColorMid, *endColorBot;
     RestartPt restarts[MAX_RESTART]; int restartCount;

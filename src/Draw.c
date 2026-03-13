@@ -425,7 +425,7 @@ void DrawPodRodMesh(float x0, float y0, float x1, float y1, Color col)
     DrawLine((int)x0, (int)y0, (int)x1, (int)y1, col);
 }
 
-void DrawTankMesh(float sx, float sy, Color bodyCol, Color legCol, Color labelCol)
+void DrawTankMesh(float sx, float sy, Color bodyCol, Color labelCol)
 {
     DrawMesh2D(&sTankMesh,      (Vector2){ sx, sy }, 0.0f, 1.0f, bodyCol);
     DrawMesh2D(&sTankLabelMesh, (Vector2){ sx, sy }, 0.0f, 1.0f, labelCol);
