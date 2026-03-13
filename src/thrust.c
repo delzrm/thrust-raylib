@@ -350,12 +350,12 @@ static void ShipCalcPosition(void) {
     if ((s->y <= (float)VIEWPORT_H || skipLevel) && s->active) {
         g->pod.active = false;
         if (s->podConnected || skipLevel) {
-            AddBlackHole(s->x, s->y, C_YELLOW, "MissionComplete");
-            AddBlackHole(g->pod.x, g->pod.y, g->level.podColor, "MissionComplete");
+            AddBlackHole(s->x, s->y, C_YELLOW, GS_MISSION_COMPLETE);
+            AddBlackHole(g->pod.x, g->pod.y, g->level.podColor, GS_MISSION_COMPLETE);
             gBonusScore = (g->reactor.countdown < 10) ?
                 (3600 + g->curLevel*400) : (1600 + g->curLevel*400);
         } else {
-            const char *cb = (g->reactor.countdown < 10) ? "MissionFailed" : "MissionIncomplete";
+            GameState cb = (g->reactor.countdown < 10) ? GS_MISSION_FAILED : GS_MISSION_INCOMPLETE;
             AddBlackHole(s->x, s->y, C_YELLOW, cb);
         }
         gState = GS_BLACK_HOLE;
@@ -1034,7 +1034,7 @@ static void StartNewLife(bool respawn) {
     InitStars();
 
     // Add black hole intro
-    AddBlackHole(s->x, s->y, C_YELLOW, "InFlight");
+    AddBlackHole(s->x, s->y, C_YELLOW, GS_IN_FLIGHT);
     gState = GS_BLACK_HOLE;
 }
 
@@ -1139,13 +1139,8 @@ static void Thrust(void) {
         for (int i = GetBhCount()-1; i >= 0; i--) {
             BlackHole *bh = GetBhAt(i);
             if (DrawBlackHole(bh, gGame.arena.vpOfsX, gGame.arena.vpOfsY, gTick)) {
-                const char *cb = bh->callback;
-                if (strcmp(cb,"InFlight")==0) {
-                    DrawShip();
-                    gState = GS_IN_FLIGHT;
-                } else if (strcmp(cb,"MissionComplete")==0) gState = GS_MISSION_COMPLETE;
-                else if (strcmp(cb,"MissionFailed")==0)     gState = GS_MISSION_FAILED;
-                else if (strcmp(cb,"MissionIncomplete")==0) gState = GS_MISSION_INCOMPLETE;
+                if (bh->callback == GS_IN_FLIGHT) DrawShip();
+                gState = bh->callback;
                 RemoveBhAt(i);
             }
         }

@@ -8,7 +8,7 @@
 static BlackHole sBhArr[MAX_BH];
 static int sBhCount;
 
-void AddBlackHole(float wx, float wy, Color col, const char *cb) {
+void AddBlackHole(float wx, float wy, Color col, GameState cb) {
     if (sBhCount >= MAX_BH) return;
     BlackHole *bh = &sBhArr[sBhCount++];
     bh->x = wx; bh->y = wy;

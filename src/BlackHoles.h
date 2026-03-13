@@ -1,6 +1,7 @@
 #pragma once
 // ===================== BLACK HOLES =====================
 #include "raylib.h"
+#include "GameTypes.h"
 #include <stdbool.h>
 
 typedef struct {
@@ -8,10 +9,10 @@ typedef struct {
     Color color;
     float blocks[5];
     float age;
-    const char *callback; // state name to set when done
+    GameState callback; // state to set when animation completes
 } BlackHole;
 
-void       AddBlackHole(float wx, float wy, Color col, const char *cb);
+void       AddBlackHole(float wx, float wy, Color col, GameState cb);
 bool       DrawBlackHole(BlackHole *bh, float vpOfsX, float vpOfsY, float tick);
 int        GetBhCount(void);
 BlackHole *GetBhAt(int i);
