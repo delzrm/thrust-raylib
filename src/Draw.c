@@ -542,7 +542,7 @@ void CreateLandscapeMesh(const Vert2D *pts, int count, float arenaH, Color col) 
 }
 
 void DrawLandscapeMesh(float vpOfsX, float vpOfsY, int arenaW, bool invisible) {
-    Color col = invisible ? (Color){ 0, 0, 0, 255 } : sLandCol;
+    Color col = invisible ? INVISCOLOR : sLandCol;
     for (int rep = -1; rep <= 1; rep++) {
         float offX = (float)(rep * arenaW);
         for (int t = 0; t < sLandTriCount; t++) {

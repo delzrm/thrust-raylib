@@ -12,7 +12,7 @@
 #define C_WHITE    CLITERAL(Color){255,255,255,255}
 #define C_BLACK    CLITERAL(Color){  0,  0,  0,255}
 #define C_GRAY     CLITERAL(Color){136,136,136,255}
-#define INVISCOLOR CLITERAL(Color){  0,  0,  0,255}  // fully black - invisible door tint
+#define INVISCOLOR CLITERAL(Color){  3,  3,  3,255}  // fully black - invisible door tint
 
 // Level landscape/door colors (door colors match landscape so they blend in)
 #define LEVEL1COLOR  CLITERAL(Color){136,  0,  0,255}  // #880000 - levels 1, 5

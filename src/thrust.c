@@ -1,15 +1,16 @@
 // Thrust - C/raylib port of the JavaScript Thrust game
 #include "raylib.h"
 #include "rlgl.h"
+#include "GameTypes.h"
 #include "Draw.h"
-#include "Levels.h"
 #include "Collision.h"
-#include "Types.h"
 #include "VectorFont.h"
 #include "HUD.h"
 #include "Colours.h"
 #include "Explosions.h"
 #include "BlackHoles.h"
+#include "Hiscore.h"
+#include "Input.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,20 +22,7 @@
 #if defined(WIN32) && !defined(_DEBUG)
 #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
-// ===================== CONSTANTS =====================
-//#define VIEWPORT_W   1024/*(960)*/
-//#define VIEWPORT_H   717/*(470)*/
-#define VIEWPORT_W   960
-#define VIEWPORT_H   470
-// HUD_H is defined in HUD.h
-#define SCREEN_H     (VIEWPORT_H + HUD_H)
-#define GAME_FPS     60
-#define BASE_FPS     20.0f  // original physics rate; all per-frame increments scaled by gTick = dt*BASE_FPS
-#define ROD_LEN      73.0f
-// MAX_LS, MAX_ENEMIES, MAX_TANKS, MAX_DOORS, MAX_DSTATES, MAX_DVERTS,
-// MAX_KEYS, MAX_RESTART, NUM_LEVELS are defined in Levels.h
-#define MAX_BULLETS  40
-#define MAX_STARS    55
+// Constants, structs and enums are defined in GameTypes.h
 
 // ===================== MATH UTILITIES =====================
 static float DTR(float deg) { return (deg - 90.0f) * DEG2RAD; }  // JS DegreesToRadians
@@ -77,116 +65,9 @@ static void DrawArcLines(float cx, float cy, float radius,
 
 
 
-// ===================== LEVEL DATA =====================
-// Types and data are in Levels.h / Levels.c
-
-// ===================== GAME STRUCTURES =====================
-typedef struct {
-    float x,y,prevX,prevY,vx,vy,avx,avy;
-    float ori, applyRot, thrustPow, rotSpeed;
-    bool active, thrust, shield, paused;
-    bool podInitiate, podConnected, gunLoaded, refuelling;
-    V2 cNose,cTail,cWingS,cWingP;
-    V2 pNose,pTail,pWingS,pWingP;
-} Ship;
-
-typedef struct {
-    float x,y,prevX,prevY,vx,vy;
-    float rot, radius;
-    bool active;
-} Pod;
-
-typedef struct {
-    // body vertices (pre-rotated, in world space)
-    V2 body[6];
-    V2 gun, dome;
-    float ori; // radians
-    float gunAngleRange, gunAngleOfs, aggression;
-} Enemy;
-
-typedef struct {
-    float x,y,fuelLoad;
-    V2 corners[4]; // collision box
-    struct { float l,r,t,b; } refuelZone;
-} Tank;
-
-typedef struct {
-    float x,y;   // world pos
-    float prevX, prevY;
-    float vx,vy;
-    bool enemyFire;
-    float age; int maxAge;
-} Bullet;
-
-typedef struct {
-    float x,y;
-    int state, movement;
-    float stateF;        // fractional state for sub-frame animation
-    float beginCloseAge; // game age when close begins (-1 = inactive)
-    bool inProgress;
-    const DoorDef *def;
-} Door;
-
-typedef struct {
-    // Stars
-    V2 stars[MAX_STARS];
-    Color starColors[MAX_STARS];
-    // Arena geometry
-    float vpOfsX, vpOfsY;
-    float slideX, slideY;
-    int arenaW, arenaH;
-    const LevelDef *lvl;
-} Arena;
-
-typedef struct {
-    float x,y,radius;
-    int damage, maxDamage;
-    int countdown; float timer;
-    bool active, countdownStarted;
-    float smokeY[2];
-    float drawSmoke;
-} Reactor;
-
-typedef enum {
-    GS_KEY_SELECT, GS_HIGHSCORE, GS_HIGHSCORE_SHOW, GS_START_GAME, GS_START_LIFE,
-    GS_IN_FLIGHT, GS_BLACK_HOLE, GS_GAME_OVER,
-    GS_MISSION_COMPLETE, GS_MISSION_COMPLETE_MSG,
-    GS_MISSION_FAILED, GS_MISSION_FAILED_MSG,
-    GS_MISSION_INCOMPLETE, GS_MISSION_INCOMPLETE_MSG,
-    GS_CHECK_LEVEL, GS_DO_NOTHING, GS_HIGHSCORE_EDIT,
-    GS_RESPAWN,
-} GameState;
-
-typedef struct {
-    int visLevel, curLevel, prevLevel;
-    float age; int lives, score; float fuel;
-    bool invisTerrain;
-    float lastDieY;
-    bool lastDieHasPod;
-    Arena arena;
-    Reactor reactor;
-    Ship ship;
-    Pod pod;
-    Enemy enemies[MAX_ENEMIES]; int enemyCount;
-    Tank tanks[MAX_TANKS]; int tankCount;
-    Bullet bullets[MAX_BULLETS]; int bulletCount;
-    Door doors[MAX_DOORS]; int doorCount;
-    bool cheatUnlimFuel, cheatUnlimLives;
-    LevelDef level; // copy of current level data
-} Game;
-
-// ===================== HIGH SCORES =====================
-typedef struct { char name[16]; int score; } HScore;
-static HScore gHighScores[8] = {
-    {"HCG",200000},{"Delz",150000},{"Hayes",100000},
-    {"CHS",50000},{"RDA",20000},{"Super",15000},{"Space",5000},{"Towers",1000}
-};
-static int gHSNewIdx = -1;
-static char gHSNewName[16] = {0};
-
 // ===================== GLOBALS =====================
-static Game gGame;
-static GameState gState = GS_KEY_SELECT;
+Game      gGame;
+GameState gState = GS_KEY_SELECT;
 static Texture2D gHudTexture;   // bg.gif sprite sheet (5760×51, 6 frames of 960px)
 static Texture2D gPicTexture;   // 320x200 picture
 static int gPauseTimer = 0;     // frame at which deferred state fires
@@ -196,22 +77,13 @@ static int gFrameCount = 0;     // total frames elapsed (always incremented)
 static int gBonusScore = 0;
 static float gPlanetExpPos = 0.0f;
 static float gTick = 1.0f;  // dt * BASE_FPS, set each frame
-static float gZoom = 1.0f;  // global zoom scale (1.0 = normal)
+float gZoom = 1.0f;         // global zoom scale (1.0 = normal)
 static char gMsgBuf[2048];  // current message text (redrawn each frame in GS_DO_NOTHING)
 
 static Color gPlanetExpColors[] = {
     {255,255,0,255},{255,0,0,255},{0,255,0,255},{0,0,255,255},{255,0,255,255},
     {255,0,0,255},{0,255,0,255},{0,0,255,255},{255,0,255,255},{255,255,0,255}
 };
-
-// Key bindings (default)
-static int KEY_CCW    = KEY_Z;
-static int KEY_CW     = KEY_X;
-static int KEY_FIRE   = KEY_ENTER;
-static int KEY_THRUST = KEY_RIGHT_SHIFT;
-static int KEY_SHIELD = KEY_SPACE;
-static int BIND_PAUSE  = KEY_P;
-static int KEY_QUIT   = KEY_ESCAPE;
 
 
 // ===================== DRAWING HELPERS =====================
@@ -561,13 +433,13 @@ static void ShipScrollViewport(void) {
 }
 
 // ===================== SHIP DIE =====================
-static void SetPause(GameState target, int ms) {
+void SetPause(GameState target, int ms) {
     gPauseActive = true;
     gPauseTarget = target;
     gPauseTimer  = gFrameCount + (int)(ms * GAME_FPS / 1000.0f); // convert ms to frames
 }
 
-static void ShipDie(float sx, float sy, bool jumpLevel) {
+void ShipDie(float sx, float sy, bool jumpLevel) {
     Ship *s = &gGame.ship;
     s->active = false;
     s->vx = 0; s->vy = 0;
@@ -1134,7 +1006,7 @@ static void StartNewLife(bool respawn) {
     gGame.doorCount = 0;
     for (int i = 0; i < lv->doorCount; i++) {
         Door *d = &gGame.doors[gGame.doorCount++];
-        d->def = &gLevels[gGame.curLevel-1].doors[i];
+        d->def = &gGame.level.doors[i];
         d->state = 0; d->movement = 0; d->stateF = 0.0f;
         d->inProgress = false; d->beginCloseAge = -1.0f;
         d->x = lv->doors[i].x; d->y = lv->doors[i].y;
@@ -1175,54 +1047,6 @@ static void CreateGame(void) {
     LoadLevel(1);
     //LoadLevel(7);
     gPauseActive = false;
-}
-
-static void CheckHighScore(bool immediate);  // forward declaration
-
-// ===================== INPUT HANDLING =====================
-static void HandleInput(void) {
-    Ship *s = &gGame.ship;
-
-    if (!s->active) return;
-
-    if (IsKeyPressed(BIND_PAUSE)) {
-        s->paused = !s->paused;
-    } else if (s->paused && (IsKeyPressed(KEY_Z) || IsKeyPressed(KEY_X) ||
-               IsKeyPressed(KEY_RIGHT_SHIFT) || IsKeyPressed(KEY_ENTER) ||
-               IsKeyPressed(KEY_SPACE))) {
-        s->paused = false;
-    }
-    if (IsKeyPressed(KEY_QUIT)) {
-        gGame.lives = -1;
-        ShipDie(-5000,-5000,false);
-        CheckHighScore(true);
-        return;
-    }
-
-    s->thrust = IsKeyDown(KEY_THRUST);
-    s->shield = IsKeyDown(KEY_SHIELD);
-
-    // Rotation
-    if (IsKeyDown(KEY_CCW)) s->applyRot = -s->rotSpeed;
-    else if (IsKeyDown(KEY_CW)) s->applyRot = s->rotSpeed;
-    else s->applyRot = 0;
-
-    // Fire
-    if (IsKeyReleased(KEY_FIRE)) s->gunLoaded = true;
-    if (IsKeyPressed(KEY_FIRE) && s->gunLoaded && !s->shield) {
-        s->gunLoaded = false;
-        if (gGame.bulletCount < MAX_BULLETS) {
-            V2 bofs = CalcPt(s->ori, 16);
-            V2 bv   = CalcPt(s->ori, 17);
-            Bullet *nb = &gGame.bullets[gGame.bulletCount++];
-            nb->x = s->x + bofs.x; nb->y = s->y + bofs.y;
-            nb->prevX = nb->x; nb->prevY = nb->y;
-            nb->vx = bv.x + s->avx; nb->vy = bv.y + s->avy;
-            nb->enemyFire = false;
-            nb->age = 0;
-            nb->maxAge = (int)(sqrtf(VIEWPORT_W*VIEWPORT_W+VIEWPORT_H*VIEWPORT_H)/15);
-        }
-    }
 }
 
 // ===================== MAIN GAME STATE MACHINE =====================
@@ -1277,90 +1101,6 @@ static void DoKeySelect(void) {
     if (IsKeyPressed(KEY_SPACE)) { gState = GS_START_GAME; }
 }
 
-static void DoHighScoreTable(void) {
-    char buf[2048];
-    int off = 0;
-    //off += snprintf(buf+off, sizeof(buf)-off, "\n#00ff00top eight thrusters\n\n#ffff00");
-    off += snprintf(buf+off, sizeof(buf)-off, "\n#00ff00hiscores (best of the best!)\n\n#ffff00");
-    for (int i = 0; i < 8; i++) {
-        off += snprintf(buf+off, sizeof(buf)-off, " %d. %8d  %s\n", i+1, gHighScores[i].score, gHighScores[i].name);
-    }
-    snprintf(buf+off, sizeof(buf)-off, "\n#ffffffpress space to start\n\n");
-    DrawMessage(buf, gZoom);
-}
-
-static void CheckHighScore(bool immediate) {
-    bool cheating = gGame.cheatUnlimFuel || gGame.cheatUnlimLives;
-    if (!cheating && gGame.score > gHighScores[7].score) {
-        // Overwrite last slot, bubble up to correct sorted position
-        gHighScores[7].score = gGame.score;
-        gHighScores[7].name[0] = '\0';
-        for (int i = 7; i > 0 && gHighScores[i].score > gHighScores[i-1].score; i--) {
-            HScore tmp = gHighScores[i];
-            gHighScores[i] = gHighScores[i-1];
-            gHighScores[i-1] = tmp;
-        }
-        // Track which slot is the new entry (first empty-named slot matching score)
-        gHSNewIdx = -1;
-        for (int i = 0; i < 8; i++) {
-            if (gHighScores[i].score == gGame.score && gHighScores[i].name[0] == '\0') {
-                gHSNewIdx = i; break;
-            }
-        }
-        gHSNewName[0] = '\0';
-        gState = GS_HIGHSCORE_EDIT;
-    } else {
-        gHSNewIdx = -1;
-        if (immediate) gState = GS_HIGHSCORE;
-        else SetPause(GS_HIGHSCORE, 3000);
-    }
-}
-
-static void DoHighScoreEdit(void) {
-    // Keyboard: append chars, backspace, enter to confirm
-    int nameLen = (int)strlen(gHSNewName);
-    int key = GetCharPressed();
-    while (key > 0) {
-        char c = (char)key;
-        if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
-        if (nameLen < 11 && (c == ' ' || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'))) {
-            gHSNewName[nameLen++] = c;
-            gHSNewName[nameLen] = '\0';
-        }
-        key = GetCharPressed();
-    }
-    if (IsKeyPressed(KEY_BACKSPACE) && nameLen > 0) {
-        gHSNewName[--nameLen] = '\0';
-    }
-    if (IsKeyPressed(KEY_ENTER)) {
-        if (gHSNewIdx >= 0) {
-            snprintf(gHighScores[gHSNewIdx].name, sizeof(gHighScores[gHSNewIdx].name), "%s", gHSNewName);
-        }
-        gHSNewIdx = -1;
-        gState = GS_HIGHSCORE;
-        return;
-    }
-
-    // Draw congratulations + table with cursor on new entry
-    char buf[2048];
-    int off = 0;
-    off += snprintf(buf+off, sizeof(buf)-off, "#ff0000congratulations\n\n#ffff00");
-    for (int i = 0; i < 8; i++) {
-        if (i == gHSNewIdx) {
-            off += snprintf(buf+off, sizeof(buf)-off, " %d. %8d  #00ff00%s", i+1, gHighScores[i].score, gHSNewName);
-            if (nameLen < 11) {
-                off += snprintf(buf+off, sizeof(buf)-off, "#ffff00_");
-                for (int sp = nameLen + 1; sp < 11; sp++)
-                    off += snprintf(buf+off, sizeof(buf)-off, " ");
-            }
-            off += snprintf(buf+off, sizeof(buf)-off, "#ffff00\n");
-        } else {
-            off += snprintf(buf+off, sizeof(buf)-off, " %d. %8d  %s\n", i+1, gHighScores[i].score, gHighScores[i].name);
-        }
-    }
-    snprintf(buf+off, sizeof(buf)-off, "\n#00ff00please enter your name\n\n");
-    DrawMessage(buf, gZoom);
-}
 
 static void Thrust(void) {
     gFrameCount++;
