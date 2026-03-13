@@ -1,10 +1,10 @@
 #include "VectorFont.h"
-#include "Types.h"
+#include "GameTypes.h"
 #include <string.h>
 #include <math.h>
 #include <stdbool.h>
 
-// ---- Internal polygon fill helpers (local copies; V2 from Types.h) ----
+// ---- Internal polygon fill helpers (local copies; V2 from GameTypes.h) ----
 
 // Max polygon vertices expected for any glyph.
 #define VF_MAX_VERTS 16

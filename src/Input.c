@@ -18,12 +18,6 @@ static int KEY_SHIELD = KEY_SPACE;
 static int BIND_PAUSE = KEY_P;
 static int KEY_QUIT   = KEY_ESCAPE;
 
-// ===================== LOCAL MATH =====================
-static V2 CalcPt(float angleDeg, float radius) {
-    float a = (angleDeg - 90.0f) * DEG2RAD;
-    return (V2){ cosf(a) * radius, sinf(a) * radius };
-}
-
 // ===================== INPUT HANDLING =====================
 void HandleInput(void) {
     Ship *s = &gGame.ship;
@@ -65,7 +59,7 @@ void HandleInput(void) {
             nb->vx = bv.x + s->avx; nb->vy = bv.y + s->avy;
             nb->enemyFire = false;
             nb->age = 0;
-            nb->maxAge = (int)(sqrtf(VIEWPORT_W*VIEWPORT_W+VIEWPORT_H*VIEWPORT_H)/15);
+            nb->maxAge = BULLET_MAX_AGE;
         }
     }
 }

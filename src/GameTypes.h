@@ -1,20 +1,30 @@
 #pragma once
 // Shared game type definitions: constants, structs, enums.
 // Included by any module that needs game state types.
-#include "Types.h"
 #include "Levels.h"
 #include "HUD.h"        // for HUD_H
 #include <stdbool.h>
+#include <math.h>
+
+typedef struct { float x, y; } V2;
 
 // ===================== CONSTANTS =====================
-#define VIEWPORT_W   960
-#define VIEWPORT_H   470
-#define SCREEN_H     (VIEWPORT_H + HUD_H)
-#define GAME_FPS     60
-#define BASE_FPS     20.0f
-#define ROD_LEN      73.0f
-#define MAX_BULLETS  40
-#define MAX_STARS    55
+#define VIEWPORT_W      960
+#define VIEWPORT_H      470
+#define SCREEN_H        (VIEWPORT_H + HUD_H)
+#define GAME_FPS        60
+#define BASE_FPS        20.0f
+#define ROD_LEN         73.0f
+#define MAX_BULLETS     40
+#define MAX_STARS       55
+#define BULLET_MAX_AGE  71   // (int)(sqrt(VIEWPORT_W^2+VIEWPORT_H^2)/15)
+
+// ===================== MATH UTILITIES =====================
+// Angle (game degrees, 0=up) to offset vector. Used by thrust.c and Input.c.
+static inline V2 CalcPt(float angleDeg, float radius) {
+    float a = (angleDeg - 90.0f) * DEG2RAD;
+    return (V2){ cosf(a) * radius, sinf(a) * radius };
+}
 
 // ===================== STRUCTS =====================
 typedef struct {
@@ -35,6 +45,7 @@ typedef struct {
 typedef struct {
     V2 body[6];
     V2 gun, dome;
+    float cx, cy;   // world-space centre (set once in InitEnemy)
     float ori;
     float gunAngleRange, gunAngleOfs, aggression;
 } Enemy;
@@ -54,7 +65,6 @@ typedef struct {
 } Bullet;
 
 typedef struct {
-    float x,y;
     int state, movement;
     float stateF;
     float beginCloseAge;

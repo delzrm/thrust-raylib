@@ -34,11 +34,6 @@ static V2 RotObj(float lx, float ly, float ori, float px, float py) {
     return (V2){ px + r*cosf(a), py + r*sinf(a) };
 }
 
-static V2 CalcPt(float angleDeg, float radius) {
-    float a = DTR(angleDeg);
-    return (V2){ cosf(a)*radius, sinf(a)*radius };
-}
-
 static float Dist(float ax, float ay, float bx, float by) {
     return sqrtf((ax-bx)*(ax-bx)+(ay-by)*(ay-by));
 }
@@ -79,6 +74,7 @@ static float gPlanetExpPos = 0.0f;
 static float gTick = 1.0f;  // dt * BASE_FPS, set each frame
 float gZoom = 1.0f;         // global zoom scale (1.0 = normal)
 static char gMsgBuf[2048];  // current message text (redrawn each frame in GS_DO_NOTHING)
+static bool gCheatSkipLevel = false;
 
 static Color gPlanetExpColors[] = {
     {255,255,0,255},{255,0,0,255},{0,255,0,255},{0,0,255,255},{255,0,255,255},
@@ -213,14 +209,11 @@ static void InitEnemy(Enemy *e, EnemyDef *d) {
     }
     e->dome = RotObj(0, 19, ori, d->x, d->y);
     e->gun  = RotObj(0,-10, ori, d->x, d->y);
+    e->cx = d->x; e->cy = d->y;
 }
 
 static void DrawEnemy(Enemy *e) {
-    Color ec = gGame.level.enemyColor;
-    // Recover world-space centre from dome: dome = (cx + 19*cos(ori), cy + 19*sin(ori))
-    float cx = e->dome.x - 19.0f * cosf(e->ori);
-    float cy = e->dome.y - 19.0f * sinf(e->ori);
-    DrawEnemyMesh(SXf(cx), SYf(cy), e->ori, ec);
+    DrawEnemyMesh(SXf(e->cx), SYf(e->cy), e->ori, gGame.level.enemyColor);
 }
 
 // ===================== FUEL TANK DRAWING =====================
@@ -277,6 +270,20 @@ static void DrawDoor(Door *d, bool invisible) {
 // HUD and message drawing are in HUD.h / HUD.c
 // Explosions are in Explosions.h / Explosions.c
 // Black holes are in BlackHoles.h / BlackHoles.c
+
+// ===================== PAUSE TIMER =====================
+static void CheckPauseTimer(void) {
+    if (gPauseActive && gFrameCount >= gPauseTimer) {
+        gPauseActive = false;
+        gState = gPauseTarget;
+    }
+}
+
+// ===================== CHEAT KEYS =====================
+static void HandleCheats(void) {
+    if (IsKeyPressed(KEY_L))     gGame.lives++;
+    if (IsKeyPressed(KEY_EQUAL)) gCheatSkipLevel = true;
+}
 
 // ===================== SHIP PHYSICS =====================
 static void ShipCalcPosition(void) {
@@ -337,16 +344,8 @@ static void ShipCalcPosition(void) {
     // Check upper limit (exit) - JS: ship.y <= iUpperLimit (= viewport height = 470)
     Arena *ar = &g->arena;
 
-    // dirty cheats...
-    if (IsKeyPressed(KEY_L)){
-        g->lives++;
-    }
-    bool skipLevel = false;
-    if (IsKeyPressed(KEY_EQUAL)){
-        skipLevel = true;
-    }
-
-
+    bool skipLevel = gCheatSkipLevel;
+    gCheatSkipLevel = false;
     if ((s->y <= (float)VIEWPORT_H || skipLevel) && s->active) {
         g->pod.active = false;
         if (s->podConnected || skipLevel) {
@@ -541,7 +540,7 @@ static void ReactorCountdown(void) {
 }
 
 // ===================== REDRAW (INFLIGHT) =====================
-static void ReDraw(void) {
+static void UpdateAndDraw(void) {
     bool paused = gGame.ship.paused;
     if (!paused) {
     gGame.age += gTick;
@@ -814,7 +813,7 @@ static void ReDraw(void) {
                 nb->vx = bv.x; nb->vy = bv.y;
                 nb->enemyFire = true;
                 nb->age = 0;
-                nb->maxAge = (int)(sqrtf(VIEWPORT_W*VIEWPORT_W+VIEWPORT_H*VIEWPORT_H)/15);
+                nb->maxAge = BULLET_MAX_AGE;
             }
         }
     }
@@ -1009,7 +1008,6 @@ static void StartNewLife(bool respawn) {
         d->def = &gGame.level.doors[i];
         d->state = 0; d->movement = 0; d->stateF = 0.0f;
         d->inProgress = false; d->beginCloseAge = -1.0f;
-        d->x = lv->doors[i].x; d->y = lv->doors[i].y;
     }
 
     // Ship
@@ -1107,22 +1105,14 @@ static void Thrust(void) {
 
     if (gState == GS_IN_FLIGHT) {
         HandleInput();
-        ReDraw();
-        // Check deferred (e.g. quit)
-        if (gPauseActive && gFrameCount >= gPauseTimer) {
-            gPauseActive = false;
-            gState = gPauseTarget;
-        }
+        HandleCheats();
+        UpdateAndDraw();
+        CheckPauseTimer();  // check after physics (e.g. quit via ShipDie)
         return;
     }
 
-
-
     // Check deferred state
-    if (gPauseActive && gFrameCount >= gPauseTimer) {
-        gPauseActive = false;
-        gState = gPauseTarget;
-    }
+    CheckPauseTimer();
 
     switch (gState) {
     case GS_BLACK_HOLE:
@@ -1264,7 +1254,6 @@ static void Thrust(void) {
 
     case GS_DO_NOTHING:
         // raylib clears each frame; redraw the last message so it stays visible
-        DrawHUD(gGame.curLevel, gGame.fuel, gGame.lives, gGame.score, gGame.reactor.countdownStarted, gGame.reactor.countdown, gHudTexture);
         if (gMsgBuf[0]) DrawMessage(gMsgBuf, gZoom);
         // Only allow space-to-restart when there is no pending auto-transition (gPauseActive).
         // Every mission-complete/failed/incomplete path through DO_NOTHING has an active timer,
@@ -1281,9 +1270,7 @@ int main(void) {
     srand((unsigned)time(NULL));
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 
-    int windowSizeX = 1024;
-    int windowSizeY = 768;
-    InitWindow(windowSizeX, windowSizeY, "ThrustHCG");
+    InitWindow(1024, 768, "ThrustHCG");
     //ToggleFullscreen();
 
     //InitWindow(VIEWPORT_W, SCREEN_H, "Thrust");
