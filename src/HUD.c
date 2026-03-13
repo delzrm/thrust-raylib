@@ -62,6 +62,7 @@ void DrawHUD(int curLevel, float fuel, int lives, int score,
     snprintf(buf, sizeof(buf), "%d", (int)fuel);
     DrawVectorStr(buf, xoff+95.0f, HUD_NUM_Y, C_YELLOW);
 
+    if (lives<0){lives=0;}
     snprintf(buf, sizeof(buf), "%d", lives);
     DrawVectorStr(buf, xoff+471.0f - VectorStrWidth(buf)/2.0f, HUD_NUM_Y, C_YELLOW);
 
@@ -81,7 +82,7 @@ void DrawHUD(int curLevel, float fuel, int lives, int score,
 }
 
 // ---- DrawMessage ----
-void xDrawMessage(const char *msg, float zoom) {
+void DrawMessage(const char *msg, float zoom) {
     int cx       = GetScreenWidth() / 2;
     int fontSize = (int)(18.0f * zoom); if (fontSize < 10) fontSize = 10;
     int lineH    = (int)(24.0f * zoom);
@@ -111,23 +112,10 @@ void xDrawMessage(const char *msg, float zoom) {
         DrawText(line, cx - tw/2, y, fontSize, col);
     }
 }
-void DrawMessage(const char *msg, float zoom) {
-    DrawRectangle(0, HUD_H, GetScreenWidth(), GetScreenHeight() - HUD_H, C_BLACK);
-    xDrawMessage(msg,zoom);
-}
 void DrawMessageTitle(Texture2D picTexture, const char *msg, float zoom) {
-    Color col = C_BLACK;
-    col.r = 40;
-    DrawRectangle(0, HUD_H, GetScreenWidth(), GetScreenHeight() - HUD_H, col);
-
-
     Rectangle src = { 0.0f, 0.0f, 320.0f, 200.0f };
     Rectangle dst = { 0.0f, HUD_H, GetScreenWidth(), GetScreenHeight() - HUD_H };
-
-    
     DrawTexturePro(picTexture, src, dst, (Vector2){0, 0}, 0.0f, WHITE);
-
-
-    xDrawMessage(msg,zoom);
+    DrawMessage(msg,zoom);
 }
 

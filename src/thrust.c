@@ -7,6 +7,8 @@
 #include "Types.h"
 #include "VectorFont.h"
 #include "HUD.h"
+#include "Explosions.h"
+#include "BlackHoles.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,9 +33,6 @@
 // MAX_LS, MAX_ENEMIES, MAX_TANKS, MAX_DOORS, MAX_DSTATES, MAX_DVERTS,
 // MAX_KEYS, MAX_RESTART, NUM_LEVELS are defined in Levels.h
 #define MAX_BULLETS  40
-#define MAX_EXPL     25
-#define MAX_PART     55
-#define MAX_BH       5
 #define MAX_STARS    55
 
 // ===================== COLOR HELPERS =====================
@@ -148,25 +147,6 @@ typedef struct {
 } Bullet;
 
 typedef struct {
-    float x,y,vx,vy,gravity;
-    Color color;
-    float age; int maxAge;
-} Particle;
-
-typedef struct {
-    Particle parts[MAX_PART];
-    int count;
-} Explosion;
-
-typedef struct {
-    float x,y;
-    Color color;
-    float blocks[5];
-    float age;
-    const char *callback; // state name to set when done
-} BlackHole;
-
-typedef struct {
     float x,y;
     int state, movement;
     float stateF;        // fractional state for sub-frame animation
@@ -199,7 +179,7 @@ typedef enum {
     GS_KEY_SELECT, GS_HIGHSCORE, GS_HIGHSCORE_SHOW, GS_START_GAME, GS_START_LIFE,
     GS_IN_FLIGHT, GS_BLACK_HOLE, GS_GAME_OVER,
     GS_MISSION_COMPLETE, GS_MISSION_COMPLETE_MSG,
-    GS_MISSION_FAILED, GS_MISSION_FAILED_MSG,
+    GS_MISSION_FAILED, GS_MISSION_FAILED2, GS_MISSION_FAILED_MSG,
     GS_MISSION_INCOMPLETE, GS_MISSION_INCOMPLETE_MSG,
     GS_CHECK_LEVEL, GS_DO_NOTHING, GS_HIGHSCORE_EDIT,
     GS_RESPAWN,
@@ -218,8 +198,6 @@ typedef struct {
     Enemy enemies[MAX_ENEMIES]; int enemyCount;
     Tank tanks[MAX_TANKS]; int tankCount;
     Bullet bullets[MAX_BULLETS]; int bulletCount;
-    Explosion explosions[MAX_EXPL]; int explosionCount;
-    BlackHole blackHoles[MAX_BH]; int bhCount;
     Door doors[MAX_DOORS]; int doorCount;
     bool cheatUnlimFuel, cheatUnlimLives;
     LevelDef level; // copy of current level data
@@ -338,7 +316,11 @@ static void DrawShip(void) {
     float theta = DTR(s->ori);
     float cx = SXf(s->x), cy = SYf(s->y);
 
-    DrawShipMesh(cx, cy, theta, C_YELLOW,s->thrust);
+    bool thrusting = s->thrust;
+    if (gGame.fuel<=0.0f){
+        thrusting=false;
+    }
+    DrawShipMesh(cx, cy, theta, C_YELLOW,thrusting);
 
     // Shield arcs — not part of the mesh
     if (s->shield && ((int)gGame.age % 2 == 0)) {
@@ -449,93 +431,9 @@ static void DrawDoor(Door *d, bool invisible) {
     DrawDoorMesh(def, d->state, gGame.arena.vpOfsX, gGame.arena.vpOfsY, dc, kc);
 }
 
-// ===================== EXPLOSION DRAWING =====================
-static void AddExplosion(float screenX, float screenY, bool big) {
-    if (gGame.explosionCount >= MAX_EXPL) return;
-    Explosion *e = &gGame.explosions[gGame.explosionCount++];
-    e->count = big ? 50 : 7;
-    float grav = gGame.level.gravity * 2;
-    for (int i = 0; i < e->count; i++) {
-        Particle *p = &e->parts[i];
-        p->x = screenX - 1.5f; p->y = screenY - 1.5f;
-        p->vx = ((float)rand()/RAND_MAX)*8 - 4;
-        p->vy = ((float)rand()/RAND_MAX)*8 - 4;
-        p->gravity = grav;
-        p->age = 0;
-        p->maxAge = (int)(((float)rand()/RAND_MAX)*20 + 5);
-        p->color = C_WHITE; // set by caller after
-    }
-}
-
-static void AddExplosionColored(float sx, float sy, bool big, Color col) {
-    if (gGame.explosionCount >= MAX_EXPL) return;
-    int idx = gGame.explosionCount;
-    AddExplosion(sx, sy, big);
-    // Set color on all new particles
-    Explosion *e = &gGame.explosions[idx];
-    for (int i = 0; i < e->count; i++) e->parts[i].color = col;
-}
-
-static void UpdateAndDrawExplosions(void) {
-    for (int i = gGame.explosionCount-1; i >= 0; i--) {
-        Explosion *e = &gGame.explosions[i];
-        int alive = 0;
-        for (int j = e->count-1; j >= 0; j--) {
-            Particle *p = &e->parts[j];
-            if (p->age > p->maxAge) continue;
-            p->vy += p->gravity * gTick;
-            p->x  += (p->vx - gGame.arena.slideX) * gTick;
-            p->y  += (p->vy - gGame.arena.slideY) * gTick;
-            DrawRectangle((int)p->x,(int)p->y,3,3,p->color);
-            p->age += gTick;
-            alive++;
-        }
-        if (alive == 0) {
-            gGame.explosions[i] = gGame.explosions[--gGame.explosionCount];
-        }
-    }
-}
-
-// ===================== BLACK HOLE =====================
-static void AddBlackHole(float wx, float wy, Color col, const char *cb) {
-    if (gGame.bhCount >= MAX_BH) return;
-    BlackHole *bh = &gGame.blackHoles[gGame.bhCount++];
-    bh->x = wx; bh->y = wy;
-    bh->color = col;
-    bh->callback = cb;
-    bh->age = 0;
-    for (int i = 0; i < 5; i++) bh->blocks[i] = 1.0f;
-}
-
-// Returns true when animation completes
-static bool DrawBlackHole(BlackHole *bh) {
-    float sx = SXf(bh->x), sy = SYf(bh->y);
-    for (int angle = 0; angle < 360; angle += 90) {
-        // JS: rotate(DegreesToRadians(angle)) = (angle-90)*PI/180
-        // For DrawRectanglePro (CW degrees): rotation = angle - 90
-        // origin anchors the BH center (sx,sy) at local (-dist, 9) within each block rect,
-        // so the block naturally sits at dist..dist+bw from center pointing right,
-        // then the rotation swings each arm to the correct direction.
-        float rotation = (float)(angle - 90);
-        float dist = 16.0f;
-        for (int i = 0; i < 5; i++) {
-            if (bh->blocks[i] >= 1.0f) {
-                float bw = bh->blocks[i];
-                Rectangle rec = { sx, sy, bw, 18.0f };
-                Vector2 origin = { -dist, 9.0f };
-                DrawRectanglePro(rec, origin, rotation, bh->color);
-            }
-            dist += 21.0f;
-        }
-    }
-    bh->age += gTick;
-    if (bh->age < 7)  bh->blocks[0] += 4.5f * gTick;
-    else              bh->blocks[0] -= 2.0f * gTick;
-    for (int i = 1; i < 5; i++) bh->blocks[i] = bh->blocks[i-1] / 1.6f;
-    return bh->blocks[0] < 0;
-}
-
 // HUD and message drawing are in HUD.h / HUD.c
+// Explosions are in Explosions.h / Explosions.c
+// Black holes are in BlackHoles.h / BlackHoles.c
 
 // ===================== SHIP PHYSICS =====================
 static void ShipCalcPosition(void) {
@@ -712,17 +610,17 @@ static void ShipDie(float sx, float sy, bool jumpLevel) {
     }
 
     Color shipExp = ParseHex(gGame.level.shipExplosion);
-    AddExplosionColored(sx, sy, true, shipExp);
+    AddExplosionColored(sx, sy, true, shipExp, gGame.level.gravity);
     if (s->podConnected) {
         gGame.pod.active = false;
-        AddExplosionColored(SXf(gGame.pod.x), SYf(gGame.pod.y), true, shipExp);
+        AddExplosionColored(SXf(gGame.pod.x), SYf(gGame.pod.y), true, shipExp, gGame.level.gravity);
     }
 
     if (!gGame.cheatUnlimLives) gGame.lives--;
     if (gGame.fuel < 1) gGame.lives = -1;
 
     if (gGame.lives > -1) {
-        SetPause(jumpLevel ? GS_MISSION_FAILED : GS_RESPAWN, 3000);
+        SetPause(jumpLevel ? GS_MISSION_FAILED2 : GS_RESPAWN, 3000);
     } else {
         SetPause(GS_GAME_OVER, 2800);
     }
@@ -780,21 +678,21 @@ static void ReactorCountdown(void) {
         gPlanetExpPos = 1;
         // Destroy everything
         Color se = ParseHex(gGame.level.shipExplosion);
-        AddExplosionColored(SXf(gGame.ship.x), SYf(gGame.ship.y), true, se);
+        AddExplosionColored(SXf(gGame.ship.x), SYf(gGame.ship.y), true, se, gGame.level.gravity);
         ShipDie(SXf(gGame.ship.x), SYf(gGame.ship.y), true);
         gGame.pod.active = false;
         for (int i = 0; i < gGame.enemyCount; i++) {
             Color ee = ParseHex(gGame.level.enemyExplosion);
-            AddExplosionColored(SXf(gGame.enemies[i].gun.x), SYf(gGame.enemies[i].gun.y), true, ee);
+            AddExplosionColored(SXf(gGame.enemies[i].gun.x), SYf(gGame.enemies[i].gun.y), true, ee, gGame.level.gravity);
         }
         gGame.enemyCount = 0;
         for (int i = 0; i < gGame.tankCount; i++) {
             Color te = ParseHex(gGame.level.tankExplosion);
-            AddExplosionColored(SXf(gGame.tanks[i].x), SYf(gGame.tanks[i].y), true, te);
+            AddExplosionColored(SXf(gGame.tanks[i].x), SYf(gGame.tanks[i].y), true, te, gGame.level.gravity);
         }
         gGame.tankCount = 0;
         Color re = ParseHex(gGame.level.reactorExplosion);
-        AddExplosionColored(SXf(r->x), SYf(r->y), true, re);
+        AddExplosionColored(SXf(r->x), SYf(r->y), true, re, gGame.level.gravity);
         r->active = false;
     }
 }
@@ -927,7 +825,7 @@ static void ReDraw(void) {
                 {
                     bool playerBullet = !b->enemyFire;
                     gGame.bullets[bi] = gGame.bullets[--gGame.bulletCount]; removed=true;
-                    if (playerBullet) AddExplosionColored(SXf(ox), SYf(oy), false, ParseHex(gGame.level.landscapeColor));
+                    if (playerBullet) AddExplosionColored(SXf(ox), SYf(oy), false, ParseHex(gGame.level.landscapeColor), gGame.level.gravity);
                 }
             }
             if (removed || bi >= gGame.bulletCount) continue;
@@ -951,7 +849,7 @@ static void ReDraw(void) {
                         if (!b->enemyFire && !d->inProgress) {
                             d->inProgress = true;
                             d->movement = 1;
-                            AddExplosionColored(SXf(ox),SYf(oy),false,C_YELLOW);
+                            AddExplosionColored(SXf(ox),SYf(oy),false,C_YELLOW,gGame.level.gravity);
                         }
                         gGame.bullets[bi]=gGame.bullets[--gGame.bulletCount]; removed=true;
                     }
@@ -1005,7 +903,7 @@ static void ReDraw(void) {
                         e->body[4].x,e->body[4].y,e->body[5].x,e->body[5].y,&ox,&oy))
                     {
                         Color ee = ParseHex(gGame.level.enemyExplosion);
-                        AddExplosionColored(SXf(ox),SYf(oy),true,ee);
+                        AddExplosionColored(SXf(ox),SYf(oy),true,ee,gGame.level.gravity);
                         gGame.enemies[ei] = gGame.enemies[--gGame.enemyCount];
                         gGame.bullets[bi] = gGame.bullets[--gGame.bulletCount]; removed=true;
                         gGame.score += 750;
@@ -1026,7 +924,7 @@ static void ReDraw(void) {
                         ReactorCountdown();
                     }
                     Color re = ParseHex(gGame.level.reactorExplosion);
-                    AddExplosionColored(SXf(ox),SYf(oy),false,re);
+                    AddExplosionColored(SXf(ox),SYf(oy),false,re,gGame.level.gravity);
                 }
                 if (removed || bi >= gGame.bulletCount) continue;
 
@@ -1038,7 +936,7 @@ static void ReDraw(void) {
                             t->corners[j].x,t->corners[j].y,t->corners[j+1].x,t->corners[j+1].y,&ox,&oy))
                         {
                             Color te = ParseHex(gGame.level.tankExplosion);
-                            AddExplosionColored(SXf(ox),SYf(oy),true,te);
+                            AddExplosionColored(SXf(ox),SYf(oy),true,te,gGame.level.gravity);
                             gGame.tanks[ti]=gGame.tanks[--gGame.tankCount];
                             gGame.bullets[bi]=gGame.bullets[--gGame.bulletCount]; removed=true;
                         }
@@ -1052,7 +950,7 @@ static void ReDraw(void) {
     // ---- DRAWING ----
     if (!paused) ShipScrollViewport();  // update viewport offset before any drawing
     BeginZoom();
-    UpdateAndDrawExplosions();
+    UpdateAndDrawExplosions(gTick, gGame.arena.slideX, gGame.arena.slideY);
 
     // Enemies: draw + fire
     for (int i = gGame.enemyCount-1; i >= 0; i--) {
@@ -1230,8 +1128,8 @@ static void StartNewLife(bool respawn) {
     ar->lvl = lv;
 
     gGame.bulletCount = 0;
-    gGame.explosionCount = 0;
-    gGame.bhCount = 0;
+    ResetExplosions();
+    ResetBlackHoles();
 
     // Reactor
     Reactor *r = &gGame.reactor;
@@ -1526,16 +1424,17 @@ static void Thrust(void) {
         DrawLandscapeMesh(gGame.arena.vpOfsX, gGame.arena.vpOfsY,
                           gGame.level.arenaW, gGame.invisTerrain);
         DrawPod();
-        for (int i = gGame.bhCount-1; i >= 0; i--) {
-            if (DrawBlackHole(&gGame.blackHoles[i])) {
-                const char *cb = gGame.blackHoles[i].callback;
+        for (int i = GetBhCount()-1; i >= 0; i--) {
+            BlackHole *bh = GetBhAt(i);
+            if (DrawBlackHole(bh, gGame.arena.vpOfsX, gGame.arena.vpOfsY, gTick)) {
+                const char *cb = bh->callback;
                 if (strcmp(cb,"InFlight")==0) {
                     DrawShip();
                     gState = GS_IN_FLIGHT;
                 } else if (strcmp(cb,"MissionComplete")==0) gState = GS_MISSION_COMPLETE;
                 else if (strcmp(cb,"MissionFailed")==0)     gState = GS_MISSION_FAILED;
                 else if (strcmp(cb,"MissionIncomplete")==0) gState = GS_MISSION_INCOMPLETE;
-                gGame.blackHoles[i] = gGame.blackHoles[--gGame.bhCount];
+                RemoveBhAt(i);
             }
         }
         EndZoom();
@@ -1599,8 +1498,18 @@ static void Thrust(void) {
         SetPause(GS_MISSION_FAILED_MSG, 1200);
         break;
 
+    case GS_MISSION_FAILED2:
+        gState = GS_DO_NOTHING;
+        gMsgBuf[0] = '\0';
+        LoadLevel(gGame.visLevel);
+        SetPause(GS_START_LIFE, 3000);
+        break;
+
+
     case GS_MISSION_FAILED_MSG: {
         gState = GS_DO_NOTHING;
+        LoadLevel(gGame.visLevel+1);    // advance a level
+
         SetPause(GS_CHECK_LEVEL, 3000);
         const char *t = gLevels[gGame.prevLevel > 0 ? gGame.prevLevel-1 : 0].endColorTop;
         const char *m = gLevels[gGame.prevLevel > 0 ? gGame.prevLevel-1 : 0].endColorMid;
