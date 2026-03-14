@@ -12,6 +12,8 @@
 #include "Hiscore.h"
 #include "Input.h"
 #include "debug.h"
+#include "Sprites.h"
+
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1280,13 +1282,14 @@ int main(void) {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 
     //InitWindow(1024, 768, "ThrustHCG");
-    InitWindow(320*2, 240*2, "ThrustHCG");
+    InitWindow(320, 240, "ThrustHCG");
     //ToggleFullscreen();
 
     //InitWindow(VIEWPORT_W, SCREEN_H, "Thrust");
     SetTargetFPS(GAME_FPS);
     gRenderTarget = LoadRenderTexture(FIXEDSCREENWIDTH, FIXEDSCREENHEIGHT + HUD_H);
     gPicTexture = LoadTexture("tp.gif");
+    LoadSprites();
 
     // Initialize game state
     CreateGame();
@@ -1318,6 +1321,7 @@ int main(void) {
     }
 
     UnloadTexture(gPicTexture);
+    FreeSprites();
     UnloadRenderTexture(gRenderTarget);
     CloseWindow();
     return 0;

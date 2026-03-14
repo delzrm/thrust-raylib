@@ -2,6 +2,7 @@
 #include "HUD.h"
 #include "Levels.h"
 #include "rlgl.h"
+#include "Sprites.h"
 #include <math.h>
 #include <stdbool.h>
 #include <string.h>
@@ -35,6 +36,8 @@ void DrawMesh2D(const Mesh2D *mesh, Vector2 pos, float rotation, float scale,
                 Color lineCol)
 {
     if (!mesh || mesh->vertCount == 0) return;
+
+    DrawSprite(pos.x,pos.y,0);
 
     float cosA = cosf(rotation);
     float sinA = sinf(rotation);

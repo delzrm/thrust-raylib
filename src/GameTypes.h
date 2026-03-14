@@ -12,7 +12,7 @@ typedef struct { float x, y; } V2;
 #define FIXEDSCREENWIDTH  320
 #define FIXEDSCREENHEIGHT 224
 
-#define VIEWPORT_H      470
+#define VIEWPORT_H      448 //470
 #define ZOOM            ((float)FIXEDSCREENHEIGHT / VIEWPORT_H)
 #define VIEWPORT_W      ((float)FIXEDSCREENWIDTH  / ZOOM)   // ~671
 #define GAME_FPS        60
