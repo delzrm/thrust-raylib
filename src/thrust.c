@@ -24,8 +24,6 @@
 #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
 // Constants, structs and enums are defined in GameTypes.h
-#define FIXEDSCREENWIDTH 320
-#define FIXEDSCREENHEIGHT 224
 
 // ===================== MATH UTILITIES =====================
 static float DTR(float deg) { return (deg - 90.0f) * DEG2RAD; }  // JS DegreesToRadians
@@ -74,7 +72,7 @@ static int gFrameCount = 0;     // total frames elapsed (always incremented)
 static int gBonusScore = 0;
 static float gPlanetExpPos = 0.0f;
 static float gTick = 1.0f;  // dt * BASE_FPS, set each frame
-float gZoom = 1.0f;         // global zoom scale (1.0 = normal)
+static RenderTexture2D gRenderTarget;
 static char gMsgBuf[2048];  // current message text (redrawn each frame in GS_DO_NOTHING)
 static bool gCheatSkipLevel = false;
 
@@ -97,16 +95,16 @@ static int SY(float wy) { return (int)SYf(wy); }
 // Destination pivot: centre of the actual screen game area, so the view
 // stays centred regardless of window size.
 static void BeginZoom(void) {
-    //if (gZoom == 1.0f) return;
+    //if (ZOOM == 1.0f) return;
     float dstX = FIXEDSCREENWIDTH  * 0.5f;
     float dstY = HUD_H + (FIXEDSCREENHEIGHT) * 0.5f;
     rlPushMatrix();
     rlTranslatef(dstX, dstY, 0.0f);
-    rlScalef(gZoom, gZoom, 1.0f);
+    rlScalef(ZOOM, ZOOM, 1.0f);
     rlTranslatef(-VIEWPORT_W * 0.5f, -(HUD_H + VIEWPORT_H * 0.5f), 0.0f);
 }
 static void EndZoom(void) {
-    //if (gZoom == 1.0f) return;
+    //if (ZOOM == 1.0f) return;
     rlPopMatrix();
 }
 
@@ -370,11 +368,11 @@ static void ShipScrollViewport(void) {
     Game *g = &gGame;
 
     if (s->active) {
-        // For zoom > 1 (large window): divide by gZoom so the visual dead-zone stays
+        // For zoom > 1 (large window): divide by ZOOM so the visual dead-zone stays
         // constant in screen pixels regardless of zoom level.
-        // For zoom < 1 (small window): clamp to 1 so behaviour matches the gZoom=1 baseline —
+        // For zoom < 1 (small window): clamp to 1 so behaviour matches the ZOOM=1 baseline —
         // inflating thresholds beyond the viewport at low zoom makes tracking fail entirely.
-        float zoomScale   = fmaxf(gZoom, 1.0f);
+        float zoomScale   = fmaxf(ZOOM, 1.0f);
         float velThresh   = 6.0f  / zoomScale;
         float slideSpeedX = 11.0f / zoomScale;
         float slideSpeedY = 10.0f / zoomScale;
@@ -382,7 +380,11 @@ static void ShipScrollViewport(void) {
         if (fabsf(s->avx) > velThresh) ar->slideX = s->avx;
         else if (s->avx != 0) {
             float cx   = VIEWPORT_W * 0.5f;
-            float xOfs = fminf(VIEWPORT_W * (270.0f / 960.0f) / zoomScale, cx - 5.0f);
+            // Scale dead zone by visible world width (FIXEDSCREENWIDTH/ZOOM), not full VIEWPORT_W.
+            // At ZOOM<1 only a portion of VIEWPORT_W is on screen, so the raw VIEWPORT_W-based
+            // threshold lets the ship drift far off-centre before scrolling kicks in.
+            float visW = (float)FIXEDSCREENWIDTH / ZOOM;
+            float xOfs = fminf(visW * (270.0f / VIEWPORT_W) / zoomScale, cx - 5.0f);
             if ((s->x - ar->vpOfsX) > cx + xOfs) ar->slideX = slideSpeedX;
             else if ((s->x - ar->vpOfsX) < cx - xOfs) ar->slideX = -slideSpeedX;
         }
@@ -394,7 +396,7 @@ static void ShipScrollViewport(void) {
             float yUp = fminf(VIEWPORT_H * (140.0f / 470.0f) / zoomScale, cy - 5.0f);
             if ((s->y - ar->vpOfsY) > cy + yDn) ar->slideY = slideSpeedY;
             else if ((s->y - ar->vpOfsY) < cy - yUp) ar->slideY = -slideSpeedY;
-            // Pod position check only when ship isn't fast-tracking — at high gZoom the pod
+            // Pod position check only when ship isn't fast-tracking — at high ZOOM the pod
             // threshold would otherwise override upward velocity tracking and push the ship off screen.
             if (s->podConnected) {
                 float pDn = fminf(VIEWPORT_H * (150.0f / 470.0f) / zoomScale, cy - 5.0f);
@@ -1085,7 +1087,7 @@ static void DoKeySelect(void) {
         "#888888press escape to quit\n\n"
         //"#00ffff%.52s", scroll
         );
-    DrawMessageTitle(gPicTexture, gMsgBuf, gZoom);
+    DrawMessageTitle(gPicTexture, gMsgBuf, ZOOM);
 
     // Advance scroll at JS rate: 1 step per 110ms = 2.2 logical ticks
     scrollAcc += gTick;
@@ -1159,7 +1161,7 @@ static void Thrust(void) {
         gState = GS_DO_NOTHING;
         snprintf(gMsgBuf, sizeof(gMsgBuf), "%sgame over\n\n",
             gGame.fuel < 1 ? "#ff0000out of fuel\n\n#00ff00" : "#00ff00");
-        DrawMessage(gMsgBuf, gZoom);
+        DrawMessage(gMsgBuf, ZOOM);
         CheckHighScore(false);
         break;
 
@@ -1189,7 +1191,7 @@ static void Thrust(void) {
             gGame.score += gBonusScore;
             gBonusScore = 0;
         }
-        DrawMessage(gMsgBuf, gZoom);
+        DrawMessage(gMsgBuf, ZOOM);
         break;
     }
 
@@ -1210,7 +1212,7 @@ static void Thrust(void) {
         const char *b = gLevels[gGame.prevLevel > 0 ? gGame.prevLevel-1 : 0].endColorBot;
         snprintf(gMsgBuf,sizeof(gMsgBuf),"%splanet destroyed\n\n%smission %s%d%s failed\n\n%sno bonus",
             t, m, b, gGame.visLevel-1, m, b);
-        DrawMessage(gMsgBuf, gZoom);
+        DrawMessage(gMsgBuf, ZOOM);
         break;
     }
 
@@ -1224,14 +1226,14 @@ static void Thrust(void) {
         SetPause(GS_START_LIFE, 3000);
         gState = GS_DO_NOTHING;
         snprintf(gMsgBuf, sizeof(gMsgBuf), "#00ff00mission incomplete\n\n");
-        DrawMessage(gMsgBuf, gZoom);
+        DrawMessage(gMsgBuf, ZOOM);
         break;
 
     case GS_CHECK_LEVEL:
         switch (gGame.visLevel) {
-            case 7:  gState=GS_DO_NOTHING; snprintf(gMsgBuf,sizeof(gMsgBuf),"#00ff00reverse gravity"); DrawMessage(gMsgBuf, gZoom); SetPause(GS_START_LIFE,3000); break;
-            case 13: gState=GS_DO_NOTHING; snprintf(gMsgBuf,sizeof(gMsgBuf),"#00ff00normal gravity\n\ninvisible planet"); DrawMessage(gMsgBuf, gZoom); SetPause(GS_START_LIFE,3000); break;
-            case 19: gState=GS_DO_NOTHING; snprintf(gMsgBuf,sizeof(gMsgBuf),"#00ff00reverse gravity\n\ninvisible planet"); DrawMessage(gMsgBuf, gZoom); SetPause(GS_START_LIFE,3000); break;
+            case 7:  gState=GS_DO_NOTHING; snprintf(gMsgBuf,sizeof(gMsgBuf),"#00ff00reverse gravity"); DrawMessage(gMsgBuf, ZOOM); SetPause(GS_START_LIFE,3000); break;
+            case 13: gState=GS_DO_NOTHING; snprintf(gMsgBuf,sizeof(gMsgBuf),"#00ff00normal gravity\n\ninvisible planet"); DrawMessage(gMsgBuf, ZOOM); SetPause(GS_START_LIFE,3000); break;
+            case 19: gState=GS_DO_NOTHING; snprintf(gMsgBuf,sizeof(gMsgBuf),"#00ff00reverse gravity\n\ninvisible planet"); DrawMessage(gMsgBuf, ZOOM); SetPause(GS_START_LIFE,3000); break;
             default: gState = GS_START_LIFE; break;
         }
         break;
@@ -1259,7 +1261,7 @@ static void Thrust(void) {
 
     case GS_DO_NOTHING:
         // raylib clears each frame; redraw the last message so it stays visible
-        if (gMsgBuf[0]) DrawMessage(gMsgBuf, gZoom);
+        if (gMsgBuf[0]) DrawMessage(gMsgBuf, ZOOM);
         // Only allow space-to-restart when there is no pending auto-transition (gPauseActive).
         // Every mission-complete/failed/incomplete path through DO_NOTHING has an active timer,
         // so this prevents accidentally restarting from level 1 while the transition plays out.
@@ -1276,11 +1278,12 @@ int main(void) {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 
     //InitWindow(1024, 768, "ThrustHCG");
-    InitWindow(320, 240, "ThrustHCG");
+    InitWindow(320*2, 240*2, "ThrustHCG");
     //ToggleFullscreen();
 
     //InitWindow(VIEWPORT_W, SCREEN_H, "Thrust");
     SetTargetFPS(GAME_FPS);
+    gRenderTarget = LoadRenderTexture(FIXEDSCREENWIDTH, FIXEDSCREENHEIGHT + HUD_H);
     gPicTexture = LoadTexture("tp.gif");
 
     // Initialize game state
@@ -1290,7 +1293,6 @@ int main(void) {
     while (!WindowShouldClose()) {
         gTick = GetFrameTime() * BASE_FPS;
         if (gTick > 3.0f) gTick = 3.0f;  // cap at 3 logical ticks (handles minimise/pause)
-        gZoom = (float)(GetScreenHeight() - HUD_H) / VIEWPORT_H;
 
         if (IsKeyPressed(KEY_F1)){
             ToggleFullscreen();
@@ -1299,16 +1301,22 @@ int main(void) {
             gDebugCollision = !gDebugCollision;
         }
 
-        //gZoom = 1.0f/(470.0f/VIEWPORT_H);
-
-        BeginDrawing();
+        BeginTextureMode(gRenderTarget);
         ClearBackground(C_BLACK);
         Thrust();
         DrawHUD(gGame.curLevel, gGame.fuel, gGame.lives, gGame.score, gGame.reactor.countdownStarted, gGame.reactor.countdown);
+        EndTextureMode();
+
+        BeginDrawing();
+        ClearBackground(BLACK);
+        Rectangle src = { 0, 0, FIXEDSCREENWIDTH, -(FIXEDSCREENHEIGHT + HUD_H) };
+        Rectangle dst = { 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight() };
+        DrawTexturePro(gRenderTarget.texture, src, dst, (Vector2){0, 0}, 0.0f, WHITE);
         EndDrawing();
     }
 
     UnloadTexture(gPicTexture);
+    UnloadRenderTexture(gRenderTarget);
     CloseWindow();
     return 0;
 }

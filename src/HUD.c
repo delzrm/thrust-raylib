@@ -1,6 +1,7 @@
 #include "HUD.h"
 #include "Colours.h"
 #include "VectorFont.h"
+#include "GameTypes.h"
 #include "rlgl.h"
 #include <stdio.h>
 #include <string.h>
@@ -31,7 +32,7 @@ static Color ParseHex(const char *h) {
 void DrawHUD(int curLevel, float fuel, int lives, int score,
              bool countdownActive, int countdown) {
 
-    DrawRectangle(0,  0, GetScreenWidth(), HUD_H, (Color){32,32,  96,255});
+    DrawRectangle(0,  0, FIXEDSCREENWIDTH, HUD_H, (Color){32,32,  96,255});
 
     rlPushMatrix();
     rlScalef(1.0f, 1.0f, 1.0f);
@@ -49,7 +50,7 @@ void DrawHUD(int curLevel, float fuel, int lives, int score,
 
 // ---- DrawMessage ----
 void DrawMessage(const char *msg, float zoom) {
-    int cx       = GetScreenWidth() / 2;
+    int cx       = FIXEDSCREENWIDTH / 2;
     int fontSize = (int)(18.0f * zoom); if (fontSize < 10) fontSize = 10;
     int lineH    = (int)(24.0f * zoom);
     int y        = HUD_H + (int)(40.0f * zoom);
@@ -80,7 +81,7 @@ void DrawMessage(const char *msg, float zoom) {
 }
 void DrawMessageTitle(Texture2D picTexture, const char *msg, float zoom) {
     Rectangle src = { 0.0f, 0.0f, 320.0f, 200.0f };
-    Rectangle dst = { 0.0f, HUD_H, GetScreenWidth(), GetScreenHeight() - HUD_H };
+    Rectangle dst = { 0.0f, HUD_H, FIXEDSCREENWIDTH, FIXEDSCREENHEIGHT-HUD_H };
     DrawTexturePro(picTexture, src, dst, (Vector2){0, 0}, 0.0f, WHITE);
     DrawMessage(msg,zoom);
 }

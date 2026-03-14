@@ -8,7 +8,6 @@
 // Defined in thrust.c
 extern Game       gGame;
 extern GameState  gState;
-extern float      gZoom;
 void SetPause(GameState target, int ms);
 
 // ===================== HIGH SCORE DATA =====================
@@ -53,7 +52,7 @@ void DoHighScoreTable(void) {
         off += snprintf(buf+off, sizeof(buf)-off, " %d. %8d  %s\n", i+1, gHighScores[i].score, gHighScores[i].name);
     }
     snprintf(buf+off, sizeof(buf)-off, "\n#ffffffpress space to start\n\n");
-    DrawMessage(buf, gZoom);
+    DrawMessage(buf, ZOOM);
 }
 
 void DoHighScoreEdit(void) {
@@ -97,5 +96,5 @@ void DoHighScoreEdit(void) {
         }
     }
     snprintf(buf+off, sizeof(buf)-off, "\n#00ff00please enter your name\n\n");
-    DrawMessage(buf, gZoom);
+    DrawMessage(buf, ZOOM);
 }
