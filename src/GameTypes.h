@@ -12,16 +12,15 @@ typedef struct { float x, y; } V2;
 #define FIXEDSCREENWIDTH  320
 #define FIXEDSCREENHEIGHT 224
 
-#define VIEWPORT_W      960
 #define VIEWPORT_H      470
-#define ZOOM ((float)FIXEDSCREENHEIGHT / VIEWPORT_H)
-#define SCREEN_H        (VIEWPORT_H + HUD_H)
+#define ZOOM            ((float)FIXEDSCREENHEIGHT / VIEWPORT_H)
+#define VIEWPORT_W      ((float)FIXEDSCREENWIDTH  / ZOOM)   // ~671
 #define GAME_FPS        60
 #define BASE_FPS        20.0f
 #define ROD_LEN         73.0f
 #define MAX_BULLETS     40
 #define MAX_STARS       55
-#define BULLET_MAX_AGE  71   // (int)(sqrt(VIEWPORT_W^2+VIEWPORT_H^2)/15)
+#define BULLET_MAX_AGE  54   // (int)(sqrt(VIEWPORT_W^2+VIEWPORT_H^2)/15)
 
 // ===================== MATH UTILITIES =====================
 // Angle (game degrees, 0=up) to offset vector. Used by thrust.c and Input.c.

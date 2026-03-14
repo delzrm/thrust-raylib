@@ -368,30 +368,30 @@ static void ShipScrollViewport(void) {
     Game *g = &gGame;
 
     if (s->active) {
-        // For zoom > 1 (large window): divide by ZOOM so the visual dead-zone stays
-        // constant in screen pixels regardless of zoom level.
-        // For zoom < 1 (small window): clamp to 1 so behaviour matches the ZOOM=1 baseline —
-        // inflating thresholds beyond the viewport at low zoom makes tracking fail entirely.
+        // zoomScale normalises thresholds so they feel the same in screen pixels at any zoom.
+        // Clamped to 1 because ZOOM is currently <1 (224/470); without the clamp, dividing
+        // by ZOOM would inflate all thresholds and make tracking sluggish.
         float zoomScale   = fmaxf(ZOOM, 1.0f);
-        float velThresh   = 6.0f  / zoomScale;
-        float slideSpeedX = 11.0f / zoomScale;
-        float slideSpeedY = 10.0f / zoomScale;
+        float velThresh   = 6.0f  / zoomScale;  // world-units/tick; below this, use position dead zone
+        float slideSpeedX = 11.0f / zoomScale;  // world-units/tick scroll speed, horizontal
+        float slideSpeedY = 10.0f / zoomScale;  // world-units/tick scroll speed, vertical
 
         if (fabsf(s->avx) > velThresh) ar->slideX = s->avx;
         else if (s->avx != 0) {
-            float cx   = VIEWPORT_W * 0.5f;
-            // Scale dead zone by visible world width (FIXEDSCREENWIDTH/ZOOM), not full VIEWPORT_W.
-            // At ZOOM<1 only a portion of VIEWPORT_W is on screen, so the raw VIEWPORT_W-based
-            // threshold lets the ship drift far off-centre before scrolling kicks in.
-            float visW = (float)FIXEDSCREENWIDTH / ZOOM;
-            float xOfs = fminf(visW * (270.0f / VIEWPORT_W) / zoomScale, cx - 5.0f);
+            float cx   = VIEWPORT_W * 0.5f;             // world-space centre of visible area
+            // 90 screen-pixel horizontal dead zone, converted to world units via ZOOM.
+            // Ship must drift >90px left or right of screen centre before scrolling starts.
+            float xOfs = fminf(90.0f / ZOOM / zoomScale, cx - 5.0f);
             if ((s->x - ar->vpOfsX) > cx + xOfs) ar->slideX = slideSpeedX;
             else if ((s->x - ar->vpOfsX) < cx - xOfs) ar->slideX = -slideSpeedX;
         }
         if (fabsf(s->avy) > velThresh) {
             ar->slideY = s->avy;
         } else {
-            float cy  = VIEWPORT_H * 0.5f;
+            float cy  = VIEWPORT_H * 0.5f;              // world-space centre of visible area
+            // Dead zones expressed as fractions of VIEWPORT_H (world units), then converted
+            // to world units: 120/470 ≈ 57 screen-px down, 140/470 ≈ 67 screen-px up.
+            // Asymmetric: more tolerance looking upward (player tends to fly toward ceiling).
             float yDn = fminf(VIEWPORT_H * (120.0f / 470.0f) / zoomScale, cy - 5.0f);
             float yUp = fminf(VIEWPORT_H * (140.0f / 470.0f) / zoomScale, cy - 5.0f);
             if ((s->y - ar->vpOfsY) > cy + yDn) ar->slideY = slideSpeedY;
@@ -399,6 +399,8 @@ static void ShipScrollViewport(void) {
             // Pod position check only when ship isn't fast-tracking — at high ZOOM the pod
             // threshold would otherwise override upward velocity tracking and push the ship off screen.
             if (s->podConnected) {
+                // Slightly wider pod thresholds (150/470, 170/470) so the pod doesn't
+                // yank the camera when the ship is already near a dead-zone edge.
                 float pDn = fminf(VIEWPORT_H * (150.0f / 470.0f) / zoomScale, cy - 5.0f);
                 float pUp = fminf(VIEWPORT_H * (170.0f / 470.0f) / zoomScale, cy - 5.0f);
                 if ((g->pod.y - ar->vpOfsY) > cy + pDn) ar->slideY = slideSpeedY;

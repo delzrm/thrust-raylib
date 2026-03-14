@@ -89,5 +89,37 @@ void DrawDebugCollision(void) {
         DrawLine(dbSX(lv->landscape[i].x),   dbSY(lv->landscape[i].y),
                  dbSX(lv->landscape[i+1].x), dbSY(lv->landscape[i+1].y), C);
     }
-    
+
+    // --- Camera dead zones (position-based scroll triggers) ---
+    // These are drawn in pre-zoom screen space (same coordinate system as BeginZoom).
+    // Cyan  = ship dead zone: ship must leave this box before the camera scrolls.
+    // Yellow = pod dead zone:  wider Y thresholds used when pod is connected.
+    if (s->active) {
+        float zoomScale = fmaxf(ZOOM, 1.0f);
+
+        float cx   = VIEWPORT_W * 0.5f;
+        float xOfs = fminf(90.0f / ZOOM / zoomScale, cx - 5.0f);
+
+        float cy   = VIEWPORT_H * 0.5f;
+        float yDn  = fminf(VIEWPORT_H * (120.0f / 470.0f) / zoomScale, cy - 5.0f);
+        float yUp  = fminf(VIEWPORT_H * (140.0f / 470.0f) / zoomScale, cy - 5.0f);
+
+        int szX = (int)(cx - xOfs);
+        int szY = (int)(HUD_H + cy - yUp);
+        int szW = (int)(2.0f * xOfs);
+        int szH = (int)(yUp + yDn);
+        DrawRectangle(szX, szY, szW, szH, (Color){0, 200, 255, 30});
+        DrawRectangleLines(szX, szY, szW, szH, (Color){0, 200, 255, 140});
+
+        if (s->podConnected) {
+            float pDn = fminf(VIEWPORT_H * (150.0f / 470.0f) / zoomScale, cy - 5.0f);
+            float pUp = fminf(VIEWPORT_H * (170.0f / 470.0f) / zoomScale, cy - 5.0f);
+            int pzX = (int)(cx - xOfs);
+            int pzY = (int)(HUD_H + cy - pUp);
+            int pzW = (int)(2.0f * xOfs);
+            int pzH = (int)(pUp + pDn);
+            DrawRectangle(pzX, pzY, pzW, pzH, (Color){255, 220, 0, 20});
+            DrawRectangleLines(pzX, pzY, pzW, pzH, (Color){255, 220, 0, 100});
+        }
+    }
 }

@@ -31,7 +31,6 @@ typedef struct {
 
 typedef struct {
     int arenaW, arenaH;
-    float vpOfsX, vpOfsY;
     float gravity;
     Color landscapeColor;
     LPt landscape[MAX_LS]; int lsCount;
