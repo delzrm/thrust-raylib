@@ -29,53 +29,22 @@ static Color ParseHex(const char *h) {
 #define HUD_NUM_Y  30.0f
 
 void DrawHUD(int curLevel, float fuel, int lives, int score,
-             bool countdownActive, int countdown, Texture2D hudTexture) {
-    // Scale to actual window width (HUD was designed for 960px).
-    float hs = (float)GetScreenWidth() / 960.0f;
-    int xoff = 0;
-    if (hs > 1.0f) { hs = 1.0f; xoff = (GetScreenWidth() - 960) / 2; }
+             bool countdownActive, int countdown) {
 
-    // Draw HUD background stretched to full window width.
-    int lvFrame = curLevel - 1;
-    if (lvFrame < 0) lvFrame = 0;
-    if (lvFrame > 5) lvFrame = 5;
-    Rectangle src = { lvFrame * 960.0f, 0.0f, 960.0f, 51.0f };
-    Rectangle dst = { (float)xoff, 0.0f, 960.0f * hs, (float)HUD_H };
-    DrawTexturePro(hudTexture, src, dst, (Vector2){0, 0}, 0.0f, WHITE);
+    DrawRectangle(0,  0, GetScreenWidth(), HUD_H, (Color){32,32,  96,255});
 
-    // Stretch number positions to match the HUD scale.
     rlPushMatrix();
-    rlScalef(hs, 1.0f, 1.0f);
+    rlScalef(1.0f, 1.0f, 1.0f);
 
-    // Black out number display areas so old values don't bleed through.
-    DrawRectangle(xoff+94,  30, 150, 12, C_BLACK);
-    DrawRectangle(xoff+276, 30,  40, 12, C_BLACK);
-    DrawRectangle(xoff+426, 30,  90, 12, C_BLACK);
-    DrawRectangle(xoff+626, 30,  40, 12, C_BLACK);
-    DrawRectangle(xoff+667, 30, 200, 12, C_BLACK);
+    int textY = 0; 
+    int fps = GetFPS();
+//    DrawFPS(0, textY);
 
-    char buf[64];
+    DrawText(TextFormat("FPS: %2i FUEL: %4i LIVES: %2i SCORE: %8i", fps, (int)fuel, lives, score), 0, textY, 8, C_WHITE);
 
-    snprintf(buf, sizeof(buf), "%d", (int)fuel);
-    DrawVectorStr(buf, xoff+95.0f, HUD_NUM_Y, C_YELLOW);
 
-    if (lives<0){lives=0;}
-    snprintf(buf, sizeof(buf), "%d", lives);
-    DrawVectorStr(buf, xoff+471.0f - VectorStrWidth(buf)/2.0f, HUD_NUM_Y, C_YELLOW);
-
-    snprintf(buf, sizeof(buf), "%d", score);
-    DrawVectorStr(buf, xoff+867.0f - VectorStrWidth(buf), HUD_NUM_Y, C_YELLOW);
-
-    if (countdownActive && countdown >= 0) {
-        snprintf(buf, sizeof(buf), "%d", countdown);
-        float cw = VectorStrWidth(buf);
-        DrawVectorStr(buf, xoff+296.0f - cw/2.0f, HUD_NUM_Y, C_GREEN);
-        DrawVectorStr(buf, xoff+646.0f - cw/2.0f, HUD_NUM_Y, C_GREEN);
-    }
 
     rlPopMatrix();
-
-    DrawFPS(0, 51);
 }
 
 // ---- DrawMessage ----

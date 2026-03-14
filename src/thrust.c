@@ -24,6 +24,8 @@
 #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
 // Constants, structs and enums are defined in GameTypes.h
+#define FIXEDSCREENWIDTH 320
+#define FIXEDSCREENHEIGHT 224
 
 // ===================== MATH UTILITIES =====================
 static float DTR(float deg) { return (deg - 90.0f) * DEG2RAD; }  // JS DegreesToRadians
@@ -64,7 +66,6 @@ static void DrawArcLines(float cx, float cy, float radius,
 // ===================== GLOBALS =====================
 Game      gGame;
 GameState gState = GS_KEY_SELECT;
-static Texture2D gHudTexture;   // bg.gif sprite sheet (5760×51, 6 frames of 960px)
 static Texture2D gPicTexture;   // 320x200 picture
 static int gPauseTimer = 0;     // frame at which deferred state fires
 static GameState gPauseTarget;
@@ -90,21 +91,22 @@ static float SYf(float wy) { return wy - gGame.arena.vpOfsY + HUD_H; }
 static int SX(float wx) { return (int)SXf(wx); }
 static int SY(float wy) { return (int)SYf(wy); }
 
+
 // Apply/remove a zoom scale transform centred on the game viewport.
 // Source pivot: centre of the logical viewport (pre-zoom space).
 // Destination pivot: centre of the actual screen game area, so the view
 // stays centred regardless of window size.
 static void BeginZoom(void) {
-    if (gZoom == 1.0f) return;
-    float dstX = GetScreenWidth()  * 0.5f;
-    float dstY = HUD_H + (GetScreenHeight() - HUD_H) * 0.5f;
+    //if (gZoom == 1.0f) return;
+    float dstX = FIXEDSCREENWIDTH  * 0.5f;
+    float dstY = HUD_H + (FIXEDSCREENHEIGHT) * 0.5f;
     rlPushMatrix();
     rlTranslatef(dstX, dstY, 0.0f);
     rlScalef(gZoom, gZoom, 1.0f);
     rlTranslatef(-VIEWPORT_W * 0.5f, -(HUD_H + VIEWPORT_H * 0.5f), 0.0f);
 }
 static void EndZoom(void) {
-    if (gZoom == 1.0f) return;
+    //if (gZoom == 1.0f) return;
     rlPopMatrix();
 }
 
@@ -1273,12 +1275,12 @@ int main(void) {
     srand((unsigned)time(NULL));
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 
-    InitWindow(1024, 768, "ThrustHCG");
+    //InitWindow(1024, 768, "ThrustHCG");
+    InitWindow(320, 240, "ThrustHCG");
     //ToggleFullscreen();
 
     //InitWindow(VIEWPORT_W, SCREEN_H, "Thrust");
     SetTargetFPS(GAME_FPS);
-    gHudTexture = LoadTexture("bg.gif");
     gPicTexture = LoadTexture("tp.gif");
 
     // Initialize game state
@@ -1302,11 +1304,10 @@ int main(void) {
         BeginDrawing();
         ClearBackground(C_BLACK);
         Thrust();
-        DrawHUD(gGame.curLevel, gGame.fuel, gGame.lives, gGame.score, gGame.reactor.countdownStarted, gGame.reactor.countdown, gHudTexture);
+        DrawHUD(gGame.curLevel, gGame.fuel, gGame.lives, gGame.score, gGame.reactor.countdownStarted, gGame.reactor.countdown);
         EndDrawing();
     }
 
-    UnloadTexture(gHudTexture);
     UnloadTexture(gPicTexture);
     CloseWindow();
     return 0;
