@@ -1,16 +1,75 @@
 // debug.c — Renders collision geometry in pink for debugging.
 // Toggle with F3. Drawn inside BeginZoom/EndZoom so it scales with the view.
+// Press F8 to save a screenshot (thrust_NNN.png in the working directory).
+// Press F4 to save a full-level map (landscape + stars) to level_map.png.
 #include "debug.h"
 #include "raylib.h"
 #include "GameTypes.h"
+#include "Draw.h"
+#include <stdio.h>
 
 bool gDebugCollision = false;
+
+void TakeDebugScreenshot(void) {
+    static int counter = 0;
+    char path[64];
+    snprintf(path, sizeof(path), "thrust_%03d.png", counter++);
+    TakeScreenshot(path);
+    TraceLog(LOG_INFO, "Screenshot saved: %s", path);
+}
 
 extern Game gGame;
 
 // World-to-screen helpers (mirrors thrust.c's static SXf/SYf)
 static inline int dbSX(float wx) { return (int)(wx - gGame.arena.vpOfsX); }
 static inline int dbSY(float wy) { return (int)(wy - gGame.arena.vpOfsY + HUD_H); }
+
+void SaveLevelMapTexture(void) {
+    LevelDef *lv = &gGame.level;
+    Arena    *ar = &gGame.arena;
+
+    int w = lv->arenaW;
+    int h = lv->arenaH;
+
+    RenderTexture2D rt = LoadRenderTexture(w, h);
+    BeginTextureMode(rt);
+    ClearBackground(BLACK);
+
+    // Stars: draw at raw world coordinates (no viewport offset).
+    for (int i = 0; i < lv->starCount && i < MAX_STARS; i++) {
+        int sx = (int)ar->stars[i].x;
+        int sy = (int)ar->stars[i].y;
+        DrawRectangle(sx, sy, 2, 2, ar->starColors[i]);
+    }
+
+    // Landscape: pass vpOfsY=HUD_H so the internal +HUD_H cancels out,
+    // placing terrain triangles at raw world Y coordinates.
+    DrawLandscapeMesh(0.0f, (float)HUD_H, w, false);
+
+    EndTextureMode();
+
+    // Raylib render textures are Y-flipped; correct before saving.
+    Image img = LoadImageFromTexture(rt.texture);
+    ImageFlipVertical(&img);
+    UnloadRenderTexture(rt);
+
+    char path[64];
+    snprintf(path, sizeof(path), "level%d_map.png", gGame.curLevel);
+    ExportImage(img, path);
+    TraceLog(LOG_INFO, "Level map saved: %s (%dx%d)", path, w, h);
+
+    // Zoomed version: scale down by ZOOM using nearest-neighbour to stay sharp.
+    int zw = (int)(w * ZOOM);
+    int zh = (int)(h * ZOOM);
+    Image imgZoom = ImageCopy(img);
+    ImageResizeNN(&imgZoom, zw, zh);
+    snprintf(path, sizeof(path), "level%d_map_zoom.png", gGame.curLevel);
+    ExportImage(imgZoom, path);
+    TraceLog(LOG_INFO, "Level map (zoom) saved: %s (%dx%d)", path, zw, zh);
+
+    UnloadImage(imgZoom);
+    UnloadImage(img);
+}
 
 void DrawDebugCollision(void) {
     if (!gDebugCollision) return;

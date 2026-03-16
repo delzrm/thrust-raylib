@@ -163,7 +163,9 @@ static void DrawShip(void) {
     if (gGame.fuel<=0.0f){
         thrusting=false;
     }
-    DrawShipMesh(cx, cy, theta, C_YELLOW,thrusting);
+    //DrawShipMesh(cx, cy, theta, C_YELLOW,thrusting);
+
+    DrawSpriteRot(cx,cy,SPRDEF_SHIP,s->ori);
 
     // Shield arcs — not part of the mesh
     if (s->shield && ((int)gGame.age % 2 == 0)) {
@@ -207,6 +209,7 @@ static void InitEnemy(Enemy *e, EnemyDef *d) {
     e->gunAngleRange = d->gunRange;
     e->gunAngleOfs   = d->gunOfs;
     e->aggression    = d->aggression;
+    e->sprDef        = d->sprDef;
     for (int i = 0; i < 6; i++) {
         e->body[i] = RotObj(bp[i][0], bp[i][1], ori, d->x, d->y);
     }
@@ -216,7 +219,8 @@ static void InitEnemy(Enemy *e, EnemyDef *d) {
 }
 
 static void DrawEnemy(Enemy *e) {
-    DrawEnemyMesh(SXf(e->cx), SYf(e->cy), e->ori, gGame.level.enemyColor);
+    DrawSprite(SXf(e->cx), SYf(e->cy),e->sprDef);
+//    DrawEnemyMesh(SXf(e->cx), SYf(e->cy), e->ori, gGame.level.enemyColor);
 }
 
 // ===================== FUEL TANK DRAWING =====================
@@ -1282,7 +1286,7 @@ int main(void) {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 
     //InitWindow(1024, 768, "ThrustHCG");
-    InitWindow(320, 240, "ThrustHCG");
+    InitWindow(320*4, 240*4, "ThrustHCG");
     //ToggleFullscreen();
 
     //InitWindow(VIEWPORT_W, SCREEN_H, "Thrust");
@@ -1304,6 +1308,12 @@ int main(void) {
         }
         if (IsKeyPressed(KEY_F3)) {
             gDebugCollision = !gDebugCollision;
+        }
+        if (IsKeyPressed(KEY_F4)) {
+            SaveLevelMapTexture();
+        }
+        if (IsKeyPressed(KEY_F8)) {
+            TakeDebugScreenshot();
         }
 
         BeginTextureMode(gRenderTarget);

@@ -14,7 +14,7 @@
 #define NUM_LEVELS   6
 
 typedef struct { float x, y; } LPt;
-typedef struct { float x,y,ori,gunRange,gunOfs,aggression; } EnemyDef;
+typedef struct { float x,y,ori,gunRange,gunOfs,aggression; int sprDef; } EnemyDef;
 typedef struct { float x,y; } TankDef;
 typedef struct { float x,y; } RestartPt;
 

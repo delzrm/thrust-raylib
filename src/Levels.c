@@ -1,5 +1,6 @@
 #include "Levels.h"
 #include "Colours.h"
+#include "Sprites.h"
 #include <stdbool.h>
 
 #define TWOK 1920   //2000
@@ -15,7 +16,7 @@ LevelDef gLevels[NUM_LEVELS] = {
     .reactorX=1302,.reactorY=1525.5f,
     .shipX=805,.shipY=1350,
     .podX=1128,.podY=1603,
-    .enemies={{946,1594,205,180,0,0.02f}}, .enemyCount=1,
+    .enemies={{946,1594,205,180,0,0.02f,SPRDEF_TURRET_NE}}, .enemyCount=1,
     .tanks={{805,1558}}, .tankCount=1,
     .doorCount=0,
     .endColorTop="#ff0000",.endColorMid="#00ff00",.endColorBot="#ffff00",
@@ -32,7 +33,7 @@ LevelDef gLevels[NUM_LEVELS] = {
     .reactorX=820,.reactorY=1532.5f,
     .shipX=910,.shipY=1360,
     .podX=1024,.podY=2064.5f,
-    .enemies={{1266,1888,26.5f,200,-18,0.02f},{960,1920,333,190,0,0.02f}}, .enemyCount=2,
+    .enemies={{1266,1888,26.5f,200,-18,0.02f,SPRDEF_TURRET_SW},{960,1920,333,190,0,0.02f,SPRDEF_TURRET_SE}}, .enemyCount=2,
     .tanks={{1118,2077}}, .tankCount=1,
     .doorCount=0,
     .endColorTop="#00ff00",.endColorMid="#ff0000",.endColorBot="#ffff00",
@@ -53,9 +54,9 @@ LevelDef gLevels[NUM_LEVELS] = {
     .shipX=720,.shipY=1360,
     .podX=460,.podY=2620.5f,
     .enemies={
-        {846,1852,333.5f,180,10,0.025f},{1193,1915,153,100,50,0.025f},
-        {527,2093,333.5f,180,10,0.025f},{327,2258,333.5f,180,10,0.025f},
-        {557,2405,153,100,50,0.025f}}, .enemyCount=5,
+        {846,1852,333.5f,180,10,0.025f,SPRDEF_TURRET_SE},{1193,1915,153,100,50,0.025f,SPRDEF_TURRET_NW},
+        {527,2093,333.5f,180,10,0.025f,SPRDEF_TURRET_SE},{327,2258,333.5f,180,10,0.025f,SPRDEF_TURRET_SE},
+        {557,2405,153,100,50,0.025f,SPRDEF_TURRET_NW}}, .enemyCount=5,
     .tanks={{790,1480},{1025,1930},{1075,1930},{1125,1930},{820,2174},{635,2376}},
     .tankCount=6,
     .doorCount=0,
@@ -80,10 +81,10 @@ LevelDef gLevels[NUM_LEVELS] = {
     .shipX=720,.shipY=1360,
     .podX=955,.podY=2763.5f,
     .enemies={
-        {738,1706,331.5f,180,10,0.025f},{543,1902,206,180,10,0.025f},
-        {544,1993,333.5f,180,10,0.025f},{693,2200,206,180,10,0.025f},
-        {777,2051,26,180,10,0.025f},{930,2490,333.5f,180,10,0.025f},
-        {1111,2643,153.5f,180,10,0.025f}}, .enemyCount=7,
+        {738,1706,331.5f,180,10,0.025f,SPRDEF_TURRET_SE},{543,1902,206,180,10,0.025f,SPRDEF_TURRET_NE},
+        {544,1993,333.5f,180,10,0.025f,SPRDEF_TURRET_SE},{693,2200,206,180,10,0.025f,SPRDEF_TURRET_NE},
+        {777,2051,26,180,10,0.025f,SPRDEF_TURRET_SW},{930,2490,333.5f,180,10,0.025f,SPRDEF_TURRET_SE},
+        {1111,2643,153.5f,180,10,0.025f,SPRDEF_TURRET_NW}}, .enemyCount=7,
     .tanks={0}, .tankCount=0,
     .doors={{
         .x=1043,.y=2308,
@@ -128,10 +129,10 @@ LevelDef gLevels[NUM_LEVELS] = {
     .shipX=625,.shipY=1402,
     .podX=1043,.podY=3563.5f,
     .enemies={
-        {664,2037,333.5f,180,10,0.025f},{1039,2034,26.5f,180,10,0.025f},
-        {816,2503,153.5f,180,10,0.025f},{494,3018,205.5f,180,10,0.025f},
-        {878,3009,26,180,10,0.025f},{736,3190,203.5f,180,10,0.025f},
-        {1119,3406,26,180,10,0.025f}}, .enemyCount=7,
+        {664,2037,333.5f,180,10,0.025f,SPRDEF_TURRET_SE},{1039,2034,26.5f,180,10,0.025f,SPRDEF_TURRET_SW},
+        {816,2503,153.5f,180,10,0.025f,SPRDEF_TURRET_NW},{494,3018,205.5f,180,10,0.025f,SPRDEF_TURRET_NE},
+        {878,3009,26,180,10,0.025f,SPRDEF_TURRET_SW},{736,3190,203.5f,180,10,0.025f,SPRDEF_TURRET_NE},
+        {1119,3406,26,180,10,0.025f,SPRDEF_TURRET_SW}}, .enemyCount=7,
     .tanks={{735,1657},{976,2149},{1027,2149},{576,2517},{583,3040},
             {635,3040},{839,3207},{890,3207}}, .tankCount=8,
     .doors={{
@@ -176,12 +177,12 @@ LevelDef gLevels[NUM_LEVELS] = {
     .shipX=792,.shipY=1555,
     .podX=1146,.podY=3967.5f,
     .enemies={
-        {1136,1831,26.5f,180,0,0.025f},{1525,2285,26.5f,180,0,0.025f},
-        {1286,2443,153.5f,180,0,0.025f},{1141,2265,333.5f,180,0,0.025f},
-        {1285,2709,26.5f,180,0,0.025f},{1285,2804,153.5f,180,0,0.025f},
-        {906,3184,333.5f,180,0,0.025f},{1153,3234,28,180,0,0.025f},
-        {1224,3593,333.5f,180,0,0.025f},{1152,3753,333.5f,180,0,0.025f},
-        {1310,3820,153.5f,180,0,0.025f}}, .enemyCount=11,
+        {1136,1831,26.5f,180,0,0.025f,SPRDEF_TURRET_SW},{1525,2285,26.5f,180,0,0.025f,SPRDEF_TURRET_SW},
+        {1286,2443,153.5f,180,0,0.025f,SPRDEF_TURRET_NW},{1141,2265,333.5f,180,0,0.025f,SPRDEF_TURRET_SE},
+        {1285,2709,26.5f,180,0,0.025f,SPRDEF_TURRET_SW},{1285,2804,153.5f,180,0,0.025f,SPRDEF_TURRET_NW},
+        {906,3184,333.5f,180,0,0.025f,SPRDEF_TURRET_SE},{1153,3234,28,180,0,0.025f,SPRDEF_TURRET_SW},
+        {1224,3593,333.5f,180,0,0.025f,SPRDEF_TURRET_SE},{1152,3753,333.5f,180,0,0.025f,SPRDEF_TURRET_SE},
+        {1310,3820,153.5f,180,0,0.025f,SPRDEF_TURRET_NW}}, .enemyCount=11,
     .tanks={{1454,2376},{1143,3021}}, .tankCount=2,
     .doors={{
         .x=1280,.y=3492,

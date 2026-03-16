@@ -51,6 +51,7 @@ typedef struct {
     float cx, cy;   // world-space centre (set once in InitEnemy)
     float ori;
     float gunAngleRange, gunAngleOfs, aggression;
+    int sprDef;
 } Enemy;
 
 typedef struct {

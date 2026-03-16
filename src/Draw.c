@@ -37,7 +37,7 @@ void DrawMesh2D(const Mesh2D *mesh, Vector2 pos, float rotation, float scale,
 {
     if (!mesh || mesh->vertCount == 0) return;
 
-    DrawSprite(pos.x,pos.y,0);
+    DrawSprite(pos.x,pos.y,SPRDEF_BLANK);
 
     float cosA = cosf(rotation);
     float sinA = sinf(rotation);
@@ -418,6 +418,13 @@ void DrawShipMesh(float sx, float sy, float oriRad, Color col, bool thrusting)
 
 void DrawPodMesh(float sx, float sy, bool withBase, Color bodyCol, Color baseCol)
 {
+    int spr = SPRDEF_POD;//19;
+    if (withBase)
+        spr=SPRDEF_PODWITHBASE;//18;
+    DrawSprite(sx,sy,spr);
+    return;
+
+
     DrawMesh2D(&sPodMesh,     (Vector2){ sx, sy }, 0.0f, 1.0f, bodyCol);
     if (withBase)
         DrawMesh2D(&sPodBaseMesh, (Vector2){ sx, sy }, 0.0f, 1.0f, baseCol);
@@ -430,8 +437,12 @@ void DrawPodRodMesh(float x0, float y0, float x1, float y1, Color col)
 
 void DrawTankMesh(float sx, float sy, Color bodyCol, Color labelCol)
 {
-    DrawMesh2D(&sTankMesh,      (Vector2){ sx, sy }, 0.0f, 1.0f, bodyCol);
-    DrawMesh2D(&sTankLabelMesh, (Vector2){ sx, sy }, 0.0f, 1.0f, labelCol);
+    //DrawMesh2D(&sTankMesh,      (Vector2){ sx, sy }, 0.0f, 1.0f, bodyCol);
+    //DrawMesh2D(&sTankLabelMesh, (Vector2){ sx, sy }, 0.0f, 1.0f, labelCol);
+
+    DrawSprite(sx,sy,SPRDEF_FUELTANK);
+
+
 }
 
 void DrawEnemyMesh(float sx, float sy, float oriRad, Color col)
@@ -445,6 +456,8 @@ void DrawReactorMesh(float sx, float sy,
                      float smokeY[2], bool drawSmoke,
                      float damage, float maxDamage)
 {
+    DrawSprite(sx,sy,SPRDEF_REACTOR);
+    return;
     (void)damage; (void)maxDamage;  // reserved for future tint/effects
 
     // Circle drawn first.
