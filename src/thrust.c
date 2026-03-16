@@ -191,8 +191,12 @@ static void DrawPodRod(void) {
     //DrawLine(SX(gGame.ship.x), SY(gGame.ship.y),
     //         SX(gGame.pod.x),  SY(gGame.pod.y), rc);
 
-    DrawTetherSprite(SX(gGame.ship.x), SY(gGame.ship.y),SX(gGame.pod.x),  SY(gGame.pod.y) );
-
+    if (IsKeyDown(KEY_U)){
+        DrawTetherSprite(SX(gGame.ship.x), SY(gGame.ship.y),SX(gGame.pod.x),  SY(gGame.pod.y) );
+    }
+    else{
+        DrawTetherSprite4040(SX(gGame.ship.x), SY(gGame.ship.y),SX(gGame.pod.x),  SY(gGame.pod.y) );
+    }
 
 }
 
@@ -1290,7 +1294,7 @@ int main(void) {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 
     //InitWindow(1024, 768, "ThrustHCG");
-    InitWindow(320, 240, "ThrustHCG");
+    InitWindow(320*2, 240*2, "ThrustHCG");
     //ToggleFullscreen();
 
     //InitWindow(VIEWPORT_W, SCREEN_H, "Thrust");

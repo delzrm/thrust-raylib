@@ -86,6 +86,12 @@ void DrawTetherSprite(float x1,float y1,float x2,float y2)
     rot *= (180.0f/PI); // DEGTORAD
     rot+=90.0f;
 
+    //if (rot>180.0f)
+    //    rot-=180.0f;
+    //if (rot<-180.0f)
+    //    rot+=180.0f;
+    
+
     float x = x1+((x2-x1)/2.0f)+2.0f;       // +2.0f fixes centre?
     float y = y1+((y2-y1)/2.0f)+2.0f;
 
@@ -94,6 +100,42 @@ void DrawTetherSprite(float x1,float y1,float x2,float y2)
     Vector2 org = {24.0f,24.0f};
     Rectangle frameRec = { frameX, frameY, 48.0f, 48.0f };
     Rectangle destRec = { x/2.0f,y/2.0f, 48.0f, 48.0f };
+    DrawTexturePro(SprSheet,frameRec,destRec, org, rot,WHITE);
+    rlPopMatrix();
+
+}
+
+void DrawTetherSprite4040(float x1,float y1,float x2,float y2)
+{
+// we can get rid of 2.0 scale when everything is normalized correctly...
+// vectors are currently rendered with 0.5f scale
+    rlPushMatrix();
+    rlScalef(2.0f, 2.0f, 1.0f);
+
+    float frameX = 0; //(sprnum&7)*32.0f;
+    float frameY = 176;   //(sprnum>>3)*32.0f;
+
+
+    float dx = x2-x1;
+    float dy = y2-y1;
+    float rot = atan2f(dy,dx);
+    rot *= (180.0f/PI); // DEGTORAD
+    rot+=90.0f;
+
+    //if (rot>180.0f)
+    //    rot-=180.0f;
+    //if (rot<-180.0f)
+    //    rot+=180.0f;
+    
+
+    float x = x1+((x2-x1)/2.0f)+2.0f;
+    float y = y1+((y2-y1)/2.0f)+2.0f;
+
+
+
+    Vector2 org = {20.0f,20.0f};
+    Rectangle frameRec = { frameX, frameY, 40.0f, 40.0f };
+    Rectangle destRec = { x/2.0f,y/2.0f, 40.0f, 40.0f };
     DrawTexturePro(SprSheet,frameRec,destRec, org, rot,WHITE);
     rlPopMatrix();
 
