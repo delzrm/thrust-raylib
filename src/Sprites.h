@@ -3,6 +3,8 @@ void    LoadSprites(void);
 void    FreeSprites(void);
 void DrawSprite(float x,float y,int sprnum);
 void DrawSpriteRot(float x,float y,int sprnum,float rot);
+void DrawTetherSprite(float x1,float y1,float x2,float y2);
+
 
 #define SPRDEF_BLANK        0
 #define SPRDEF_PODWITHBASE  18

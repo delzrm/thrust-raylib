@@ -187,9 +187,13 @@ static void DrawShip(void) {
 
 // ===================== POD DRAWING =====================
 static void DrawPodRod(void) {
-    Color rc = gGame.level.rodColor;
-    DrawLine(SX(gGame.ship.x), SY(gGame.ship.y),
-             SX(gGame.pod.x),  SY(gGame.pod.y), rc);
+    //Color rc = gGame.level.rodColor;
+    //DrawLine(SX(gGame.ship.x), SY(gGame.ship.y),
+    //         SX(gGame.pod.x),  SY(gGame.pod.y), rc);
+
+    DrawTetherSprite(SX(gGame.ship.x), SY(gGame.ship.y),SX(gGame.pod.x),  SY(gGame.pod.y) );
+
+
 }
 
 static void DrawPod(void) {
@@ -1286,7 +1290,7 @@ int main(void) {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 
     //InitWindow(1024, 768, "ThrustHCG");
-    InitWindow(320*4, 240*4, "ThrustHCG");
+    InitWindow(320, 240, "ThrustHCG");
     //ToggleFullscreen();
 
     //InitWindow(VIEWPORT_W, SCREEN_H, "Thrust");
