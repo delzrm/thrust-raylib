@@ -182,3 +182,78 @@ void DrawDebugCollision(void) {
         }
     }
 }
+
+
+
+void SaveLineSpriteSheet(void) {
+    int w = 320;
+    int h = 512;
+
+    RenderTexture2D rt = LoadRenderTexture(w, h);
+    BeginTextureMode(rt);
+    ClearBackground(BLACK);
+
+    DrawTetherSpriteSheet();
+
+    EndTextureMode();
+
+    // Raylib render textures are Y-flipped; correct before saving.
+    Image img = LoadImageFromTexture(rt.texture);
+    ImageFlipVertical(&img);
+    UnloadRenderTexture(rt);
+
+    char path[64];
+    snprintf(path, sizeof(path), "_linesheet.png", gGame.curLevel);
+    ExportImage(img, path);
+    TraceLog(LOG_INFO, "Sprite sheet saved: %s (%dx%d)", path, w, h);
+
+    // Zoomed version: scale down by ZOOM using nearest-neighbour to stay sharp.
+    //int zw = (int)(w * ZOOM);
+    //int zh = (int)(h * ZOOM);
+    //Image imgZoom = ImageCopy(img);
+    //ImageResizeNN(&imgZoom, zw, zh);
+    //snprintf(path, sizeof(path), "level%d_map_zoom.png", gGame.curLevel);
+    //ExportImage(imgZoom, path);
+    //TraceLog(LOG_INFO, "Level map (zoom) saved: %s (%dx%d)", path, zw, zh);
+    //UnloadImage(imgZoom);
+
+    UnloadImage(img);
+}
+
+void SaveShipSpriteSheet(void) {
+    int w = 320*2;
+    int h = 256*2;
+
+    RenderTexture2D rt = LoadRenderTexture(w, h);
+    BeginTextureMode(rt);
+    ClearBackground(BLACK);
+
+    DrawShipSpriteSheet();
+
+    EndTextureMode();
+
+    // Raylib render textures are Y-flipped; correct before saving.
+    Image img = LoadImageFromTexture(rt.texture);
+    ImageFlipVertical(&img);
+    UnloadRenderTexture(rt);
+
+    char path[64];
+    snprintf(path, sizeof(path), "shipsheet.png", gGame.curLevel);
+    ExportImage(img, path);
+    TraceLog(LOG_INFO, "Sprite sheet saved: %s (%dx%d)", path, w, h);
+
+    // Zoomed version: scale down by ZOOM using nearest-neighbour to stay sharp.
+    //int zw = (int)(w * ZOOM);
+    //int zh = (int)(h * ZOOM);
+    //Image imgZoom = ImageCopy(img);
+    //ImageResizeNN(&imgZoom, zw, zh);
+    //snprintf(path, sizeof(path), "level%d_map_zoom.png", gGame.curLevel);
+    //ExportImage(imgZoom, path);
+    //TraceLog(LOG_INFO, "Level map (zoom) saved: %s (%dx%d)", path, zw, zh);
+    //UnloadImage(imgZoom);
+
+    UnloadImage(img);
+}
+
+
+

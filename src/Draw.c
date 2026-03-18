@@ -37,7 +37,7 @@ void DrawMesh2D(const Mesh2D *mesh, Vector2 pos, float rotation, float scale,
 {
     if (!mesh || mesh->vertCount == 0) return;
 
-    DrawSprite(pos.x,pos.y,SPRDEF_BLANK);
+    //DrawSprite(pos.x,pos.y,SPRDEF_BLANK);
 
     float cosA = cosf(rotation);
     float sinA = sinf(rotation);
@@ -602,6 +602,7 @@ void DrawDoorMesh(const DoorDef *def, int state,
     for (int k = 0; k < def->keyholeCount; k++) {
         int kx = (int)(def->keyholes[k][0] - vpOfsX);
         int ky = (int)(def->keyholes[k][1] - vpOfsY + HUD_H);
-        DrawCircleLines(kx, ky, 13, keyCol);
+        //DrawCircleLines(kx, ky, 13, keyCol);
+        DrawSprite(kx,ky,SPRDEF_KEYHOLE);
     }
 }

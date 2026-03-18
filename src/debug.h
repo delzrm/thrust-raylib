@@ -12,3 +12,5 @@ void TakeDebugScreenshot(void);
 
 // Render the full level landscape + starfield to levelN_map.png (press F4 in-game).
 void SaveLevelMapTexture(void);
+void SaveLineSpriteSheet(void);
+void SaveShipSpriteSheet(void);

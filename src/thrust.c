@@ -165,17 +165,19 @@ static void DrawShip(void) {
     }
     //DrawShipMesh(cx, cy, theta, C_YELLOW,thrusting);
 
-    DrawSpriteRot(cx,cy,SPRDEF_SHIP,s->ori);
+    //DrawSpriteRot(cx,cy,SPRDEF_SHIP,s->ori);
+    DrawShipSprite3232(cx,cy,s->ori);
 
     // Shield arcs — not part of the mesh
     if (s->shield && ((int)gGame.age % 2 == 0)) {
-        Color sc = gGame.level.shieldColor;
-        for (int seg = 0; seg < 3; seg++) {
-            float a1 = theta + seg * 2.0f * PI / 3.0f;
-            float a2 = theta + (seg+1) * 2.0f * PI / 3.0f;
-            V2 oc = TPoint(3, 0, theta, cx, cy);
-            DrawArcLines(oc.x, oc.y, 17, a1, a2, sc);
-        }
+        DrawSprite(cx,cy,SPRDEF_SHIELD);
+        //Color sc = gGame.level.shieldColor;
+        //for (int seg = 0; seg < 3; seg++) {
+        //    float a1 = theta + seg * 2.0f * PI / 3.0f;
+        //    float a2 = theta + (seg+1) * 2.0f * PI / 3.0f;
+            //V2 oc = TPoint(3, 0, theta, cx, cy);
+        //    DrawArcLines(oc.x, oc.y, 17, a1, a2, sc);
+        //}
     }
 
     if (s->refuelling) {
@@ -894,8 +896,10 @@ static void UpdateAndDraw(void) {
     // Draw bullets
     for (int i = 0; i < gGame.bulletCount; i++) {
         Bullet *b = &gGame.bullets[i];
-        Color bc = b->enemyFire ? gGame.level.enemyBulletColor : gGame.level.shipBulletColor;
-        DrawRectangle(SX(b->x)-1, SY(b->y)-1, 3, 3, bc);
+        //Color bc = b->enemyFire ? gGame.level.enemyBulletColor : gGame.level.shipBulletColor;
+        //DrawRectangle(SX(b->x)-1, SY(b->y)-1, 3, 3, bc);
+        int sprDef = b->enemyFire ? SPRDEF_BULLETENEMY : SPRDEF_BULLETPLAYER;
+        DrawBulletSprite(SX(b->x)-1, SY(b->y)-1,sprDef);
     }
 
     // Stars
@@ -927,9 +931,10 @@ static void UpdateAndDraw(void) {
     }
 
     // Landscape
+    if (!gGame.ship.paused){
     DrawLandscapeMesh(gGame.arena.vpOfsX, gGame.arena.vpOfsY,
                       gGame.level.arenaW, invis);
-
+    }
     // Paused overlay — drawn inside BeginZoom so it scales and centres with the game view
     if (paused) {
         float pcx = VIEWPORT_W * 0.5f;
@@ -1293,8 +1298,9 @@ int main(void) {
     srand((unsigned)time(NULL));
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 
+    //InitWindow(2560, 1440, "ThrustHCG");
     //InitWindow(1024, 768, "ThrustHCG");
-    InitWindow(320*2, 240*2, "ThrustHCG");
+    InitWindow(320, 240, "ThrustHCG");
     //ToggleFullscreen();
 
     //InitWindow(VIEWPORT_W, SCREEN_H, "Thrust");
@@ -1320,6 +1326,12 @@ int main(void) {
         if (IsKeyPressed(KEY_F4)) {
             SaveLevelMapTexture();
         }
+        if (IsKeyPressed(KEY_F5)) {
+            SaveLineSpriteSheet();
+        }
+        if (IsKeyPressed(KEY_F6)) {
+            SaveShipSpriteSheet();
+        }
         if (IsKeyPressed(KEY_F8)) {
             TakeDebugScreenshot();
         }
@@ -1328,6 +1340,8 @@ int main(void) {
         ClearBackground(C_BLACK);
         Thrust();
         DrawHUD(gGame.curLevel, gGame.fuel, gGame.lives, gGame.score, gGame.reactor.countdownStarted, gGame.reactor.countdown);
+
+        //DrawTetherSpriteDemo();
         EndTextureMode();
 
         BeginDrawing();
